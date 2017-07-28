@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "Dense"
+#include "jmt.h"
 
-using namespace std;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
