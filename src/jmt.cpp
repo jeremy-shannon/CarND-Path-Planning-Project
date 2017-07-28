@@ -3,11 +3,13 @@
 #include <cmath>
 #include <vector>
 
-#include "Dense"
+#include "Eigen-3.3/Eigen/Dense"
 #include "jmt.h"
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
+
+using namespace std;
 
 vector<double> get_traj_coeffs(vector< double> start, vector <double> end, double T)
 {
