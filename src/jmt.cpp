@@ -9,7 +9,7 @@
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
-vector<double> JMT(vector< double> start, vector <double> end, double T)
+vector<double> get_traj_coeffs(vector< double> start, vector <double> end, double T)
 {
     /*
     Calculate the Jerk Minimizing Trajectory that connects the initial state
