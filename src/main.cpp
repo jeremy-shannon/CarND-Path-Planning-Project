@@ -5,11 +5,14 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <algorithm>
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
 
 using namespace std;
+
+#define PREVIOUS_PATH_POINTS_TO_KEEP 10
 
 // for convenience
 using json = nlohmann::json;
@@ -214,91 +217,93 @@ int main() {
         
         if (event == "telemetry") {
           // j[1] is the data JSON object
-          
-        	// Main car's localization Data
-          	double car_x = j[1]["x"];
-          	double car_y = j[1]["y"];
-          	double car_s = j[1]["s"];
-          	double car_d = j[1]["d"];
-          	double car_yaw = j[1]["yaw"];
-          	double car_speed = j[1]["speed"];
+					
+					// Main car's localization Data
+					double car_x = j[1]["x"];
+					double car_y = j[1]["y"];
+					double car_s = j[1]["s"];
+					double car_d = j[1]["d"];
+					double car_yaw = j[1]["yaw"];
+					double car_speed = j[1]["speed"];
 
-          	// Previous path data given to the Planner
-          	auto previous_path_x = j[1]["previous_path_x"];
-          	auto previous_path_y = j[1]["previous_path_y"];
-          	// Previous path's end s and d values 
-          	double end_path_s = j[1]["end_path_s"];
-          	double end_path_d = j[1]["end_path_d"];
+					// Previous path data given to the Planner
+					auto previous_path_x = j[1]["previous_path_x"];
+					auto previous_path_y = j[1]["previous_path_y"];
+					// Previous path's end s and d values 
+					double end_path_s = j[1]["end_path_s"];
+					double end_path_d = j[1]["end_path_d"];
 
-          	// Sensor Fusion Data, a list of all other cars on the same side of the road.
-          	auto sensor_fusion = j[1]["sensor_fusion"];
+					// Sensor Fusion Data, a list of all other cars on the same side of the road.
+					auto sensor_fusion = j[1]["sensor_fusion"];
 
-          	json msgJson;
+					json msgJson;
 
-          	vector<double> next_x_vals;
-          	vector<double> next_y_vals;
+					vector<double> next_x_vals;
+					vector<double> next_y_vals;
 
 
-          	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-			
-			/********************* simple, drive straight example *********************
-			double dist_inc = 0.5;
-			for(int i = 0; i < 50; i++)
-			{
-				next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
-				next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
-			}
-			***************************************************************************/
+					// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 
-			
-			/************************ drive in circles example ************************/
-				
-			double pos_x;
-			double pos_y;
-			double angle;
-			int path_size = previous_path_x.size();
+					double dist_inc = 5.5;
+					double pos_x;
+					double pos_y;
+					double angle;
+					int path_size = min(PREVIOUS_PATH_POINTS_TO_KEEP, (int)previous_path_x.size());
 
-			for(int i = 0; i < path_size; i++)
-			{
-				next_x_vals.push_back(previous_path_x[i]);
-				next_y_vals.push_back(previous_path_y[i]);
-			}
+					// add previous path, if any, to next path
+					for(int i = 0; i < path_size; i++) {
+						next_x_vals.push_back(previous_path_x[i]);
+						next_y_vals.push_back(previous_path_y[i]);
+					}
 
-			if(path_size == 0)
-			{
-				pos_x = car_x;
-				pos_y = car_y;
-				angle = deg2rad(car_yaw);
-			}
-			else
-			{
-				pos_x = previous_path_x[path_size-1];
-				pos_y = previous_path_y[path_size-1];
+					if(path_size < 2) {
+						pos_x = car_x;
+						pos_y = car_y;
+						angle = deg2rad(car_yaw);
+					} else {
+						// consider current position to be end of previous path
+						pos_x = previous_path_x[path_size-1];
+						pos_y = previous_path_y[path_size-1];
 
-				double pos_x2 = previous_path_x[path_size-2];
-				double pos_y2 = previous_path_y[path_size-2];
-				angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
-			}
+						double pos_x2 = previous_path_x[path_size-2];
+						double pos_y2 = previous_path_y[path_size-2];
+						angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
+					}
 
-			double dist_inc = 0.5;
-			for(int i = 0; i < 50-path_size; i++)
-			{    
-				next_x_vals.push_back(pos_x+(dist_inc)*cos(angle+(i+1)*(pi()/100)));
-				next_y_vals.push_back(pos_y+(dist_inc)*sin(angle+(i+1)*(pi()/100)));
-				pos_x += (dist_inc)*cos(angle+(i+1)*(pi()/100));
-				pos_y += (dist_inc)*sin(angle+(i+1)*(pi()/100));
-			}
+					/********************* simple, drive straight example *********************
+					for(int i = 0; i < 50; i++) {
+						next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
+						next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
+					}
+					***************************************************************************/
 
-			/***************************************************************************/
+					/************************ drive in circles example ************************
+					for(int i = 0; i < 50-path_size; i++) {    
+						next_x_vals.push_back(pos_x+(dist_inc)*cos(angle+(i+1)*(pi()/100)));
+						next_y_vals.push_back(pos_y+(dist_inc)*sin(angle+(i+1)*(pi()/100)));
+						pos_x += (dist_inc)*cos(angle+(i+1)*(pi()/100));
+						pos_y += (dist_inc)*sin(angle+(i+1)*(pi()/100));
+					}
+					***************************************************************************/
 
-          	msgJson["next_x"] = next_x_vals;
-          	msgJson["next_y"] = next_y_vals;
+					int next_waypoint_index = NextWaypoint(pos_x, pos_y, angle, map_waypoints_x, 																											 map_waypoints_y);
+					double next_waypoint_x = map_waypoints_x[(next_waypoint_index+1) % map_waypoints_x.size()];
+					double next_waypoint_y = map_waypoints_y[(next_waypoint_index+1) % map_waypoints_x.size()];
+					double dist_to_waypoint = distance(pos_x, pos_y, next_waypoint_x, next_waypoint_y);
+					
+					for (int i = 0; i < 50 - path_size; i++) {
+						next_x_vals.push_back(pos_x + dist_inc * i * (next_waypoint_x - pos_x)/dist_to_waypoint);
+						next_y_vals.push_back(pos_y + dist_inc * i * (next_waypoint_y - pos_y)/dist_to_waypoint);
+					}
 
-          	auto msg = "42[\"control\","+ msgJson.dump()+"]";
+					msgJson["next_x"] = next_x_vals;
+					msgJson["next_y"] = next_y_vals;
 
-          	//this_thread::sleep_for(chrono::milliseconds(1000));
-          	ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-          
+					auto msg = "42[\"control\","+ msgJson.dump()+"]";
+
+					//this_thread::sleep_for(chrono::milliseconds(1000));
+					ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+					
         }
       } else {
         // Manual driving

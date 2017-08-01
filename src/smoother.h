@@ -9,18 +9,23 @@
 
 using namespace std;
 
-vector<vector<double>> interpolate_points(vector<double> x_vals, vector<double> y_vals) {
-
+vector<double> interpolate_points(vector<double> pts_x, vector<double> pts_y, 
+                                  double interval, double output_size) {
   // uses the spline library to interpolate points connecting a series of x and y values
+  // output is output_size number of y values beginning at y[0] with specified interval
 
-  vector< vector<double> > output;
-
-  if (x_vals.size() != y_vals.size()) {
-    cout << "ERROR! SMOOTHER: interpolate_points size mismatch between x_vals and y_vals" << endl;
-    return{ { 0 }, { 0 } };
+  if (pts_x.size() != pts_y.size()) {
+    cout << "ERROR! SMOOTHER: interpolate_points size mismatch between pts_x and pts_y" << endl;
+    return { 0 };
   }
+
+  tk::spline s;
+  s.set_points(pts_x,pts_y);    // currently it is required that X is already sorted
+  vector<double> output;
+  for (int i = 0; i < output_size; i++) {
+    output.push_back(s(pts_y[0] + i * interval));
+  }
+  return output;
 }
-
-
 
 #endif
