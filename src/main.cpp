@@ -9,6 +9,7 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
+#include "smoother.h"
 
 using namespace std;
 
@@ -245,7 +246,6 @@ int main() {
 
 					// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 
-					double dist_inc = 0.5;
 					double pos_x;
 					double pos_y;
 					double angle;
@@ -271,6 +271,8 @@ int main() {
 						angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
 					}
 
+					double dist_inc = 0.5;					
+
 					/********************* simple, drive straight example *********************
 					for(int i = 0; i < 50; i++) {
 						next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
@@ -292,9 +294,9 @@ int main() {
 					vector<double> coarse_waypoints_s, coarse_waypoints_x, coarse_waypoints_y;
 					for (int i = -2; i < 3; i++) {
 						// for smooting, take two previous and three subsequent waypoints
-						coarse_waypoints_s.push_back(map_waypoints_s[(next_waypoint_index+i) % num_waypoints])
-						coarse_waypoints_x.push_back(map_waypoints_x[(next_waypoint_index+i) % num_waypoints])
-						coarse_waypoints_y.push_back(map_waypoints_y[(next_waypoint_index+i) % num_waypoints])
+						coarse_waypoints_s.push_back(map_waypoints_s[(next_waypoint_index+i) % num_waypoints]);
+						coarse_waypoints_x.push_back(map_waypoints_x[(next_waypoint_index+i) % num_waypoints]);
+						coarse_waypoints_y.push_back(map_waypoints_y[(next_waypoint_index+i) % num_waypoints]);
 					}
 					// correct for wrap in s values
 					for (int i = 1; i < coarse_waypoints_s.size(); i++) {
@@ -304,14 +306,21 @@ int main() {
 					}
 
 					// interpolation parameters, 240 points a 0.5 distance increment
-					int interpolation_points = 240;
+					int num_interpolation_points = 240;
 					vector<double> interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y;
-					
-					
-					for (int i = 0; i < 50 - path_size; i++) {
-						next_x_vals.push_back(pos_x + dist_inc * i * (next_waypoint_x - pos_x)/dist_to_waypoint);
-						next_y_vals.push_back(pos_y + dist_inc * i * (next_waypoint_y - pos_y)/dist_to_waypoint);
+					// interpolated s is simply..
+					interpolated_waypoints_s.push_back(coarse_waypoints_s[0]);
+					for (int i = 1; i < num_interpolation_points; i++) {
+						interpolated_waypoints_s.push_back(coarse_waypoints_s[0] + i * dist_inc);
 					}
+					interpolated_waypoints_x = interpolate_points(coarse_waypoints_s, coarse_waypoints_x, 
+																												 dist_inc, num_interpolation_points);
+					interpolated_waypoints_y = interpolate_points(coarse_waypoints_s, coarse_waypoints_y, 
+																												 dist_inc, num_interpolation_points);
+
+					// get rid of this
+					next_x_vals = interpolated_waypoints_x;
+					next_y_vals = interpolated_waypoints_y;
 
 					msgJson["next_x"] = next_x_vals;
 					msgJson["next_y"] = next_y_vals;
