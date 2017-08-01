@@ -13,6 +13,7 @@
 using namespace std;
 
 #define PREVIOUS_PATH_POINTS_TO_KEEP 10
+#define TRACK_LENGTH 6945.554
 
 // for convenience
 using json = nlohmann::json;
@@ -244,7 +245,7 @@ int main() {
 
 					// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 
-					double dist_inc = 5.5;
+					double dist_inc = 0.5;
 					double pos_x;
 					double pos_y;
 					double angle;
@@ -286,10 +287,26 @@ int main() {
 					}
 					***************************************************************************/
 
+					int num_waypoints = map_waypoints_x.size();
 					int next_waypoint_index = NextWaypoint(pos_x, pos_y, angle, map_waypoints_x, 																											 map_waypoints_y);
-					double next_waypoint_x = map_waypoints_x[(next_waypoint_index+1) % map_waypoints_x.size()];
-					double next_waypoint_y = map_waypoints_y[(next_waypoint_index+1) % map_waypoints_x.size()];
-					double dist_to_waypoint = distance(pos_x, pos_y, next_waypoint_x, next_waypoint_y);
+					vector<double> coarse_waypoints_s, coarse_waypoints_x, coarse_waypoints_y;
+					for (int i = -2; i < 3; i++) {
+						// for smooting, take two previous and three subsequent waypoints
+						coarse_waypoints_s.push_back(map_waypoints_s[(next_waypoint_index+i) % num_waypoints])
+						coarse_waypoints_x.push_back(map_waypoints_x[(next_waypoint_index+i) % num_waypoints])
+						coarse_waypoints_y.push_back(map_waypoints_y[(next_waypoint_index+i) % num_waypoints])
+					}
+					// correct for wrap in s values
+					for (int i = 1; i < coarse_waypoints_s.size(); i++) {
+						if (coarse_waypoints_s[i] < coarse_waypoints_s[i-1]) {
+							coarse_waypoints_s[i] += TRACK_LENGTH;
+						}
+					}
+
+					// interpolation parameters, 240 points a 0.5 distance increment
+					int interpolation_points = 240;
+					vector<double> interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y;
+					
 					
 					for (int i = 0; i < 50 - path_size; i++) {
 						next_x_vals.push_back(pos_x + dist_inc * i * (next_waypoint_x - pos_x)/dist_to_waypoint);
