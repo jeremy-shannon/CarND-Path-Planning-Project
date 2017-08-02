@@ -1,5 +1,5 @@
-#ifndef PLANNER
-#define PLANNER
+#ifndef VEHICLE
+#define VEHICLE
 
 #include <iostream>
 #include <random>
