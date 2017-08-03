@@ -25,28 +25,18 @@ public:
 
   double L = 1.7;  // vehicle "size"
 
-  double preferred_buffer = 6; // impacts "keep lane" behavior.
-
-  double d;
-
   double s;
-
-  double v;
-
-  double a;
-
-  double target_speed;
-
-  int lanes_available;
-
-  double max_acceleration;
-
+  double s_d;
+  double s_dd;
+  double d;
+  double d_d;
+  double d_dd;
   string state;
 
   /**
   * Constructor
   */
-  Vehicle(double d, double s, double v, double a);
+Vehicle::Vehicle(double s, double s_d, double s_dd, double d, double d_d, double d_dd);
 
   /**
   * Destructor
@@ -68,8 +58,6 @@ public:
   void realize_state(map<int, vector<vector<double>> > predictions);
 
   void realize_constant_speed();
-
-  int _max_accel_for_lane(map<int, vector<vector<double>> > predictions, double d, double s);
 
   void realize_keep_lane(map<int, vector<vector<double>> > predictions);
 
