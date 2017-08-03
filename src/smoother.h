@@ -10,7 +10,7 @@
 using namespace std;
 
 vector<double> interpolate_points(vector<double> pts_x, vector<double> pts_y, 
-                                  double interval, double output_size) {
+                                  double interval, int output_size) {
   // uses the spline library to interpolate points connecting a series of x and y values
   // output is output_size number of y values beginning at y[0] with specified interval
 
@@ -23,7 +23,7 @@ vector<double> interpolate_points(vector<double> pts_x, vector<double> pts_y,
   s.set_points(pts_x,pts_y);    // currently it is required that X is already sorted
   vector<double> output;
   for (int i = 0; i < output_size; i++) {
-    output.push_back(s(pts_y[0] + i * interval));
+    output.push_back(s(pts_x[0] + i * interval));
   }
   return output;
 }

@@ -219,7 +219,6 @@ int main() {
         
         if (event == "telemetry") {
           // j[1] is the data JSON object
-					
 					// Main car's localization Data
 					double car_x = j[1]["x"];
 					double car_y = j[1]["y"];
@@ -227,14 +226,12 @@ int main() {
 					double car_d = j[1]["d"];
 					double car_yaw = j[1]["yaw"];
 					double car_speed = j[1]["speed"];
-
 					// Previous path data given to the Planner
 					auto previous_path_x = j[1]["previous_path_x"];
 					auto previous_path_y = j[1]["previous_path_y"];
 					// Previous path's end s and d values 
 					double end_path_s = j[1]["end_path_s"];
 					double end_path_d = j[1]["end_path_d"];
-
 					// Sensor Fusion Data, a list of all other cars on the same side of the road.
 					auto sensor_fusion = j[1]["sensor_fusion"];
 
@@ -242,7 +239,6 @@ int main() {
 
 					vector<double> next_x_vals;
 					vector<double> next_y_vals;
-
 
 					// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 
@@ -271,6 +267,8 @@ int main() {
 						angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
 					}
 
+					cout << "x: " << pos_x << ", y: " << pos_y << ", angle: " << angle << endl;
+
 					double dist_inc = 0.5;					
 
 					/********************* simple, drive straight example *********************
@@ -298,6 +296,12 @@ int main() {
 						coarse_waypoints_x.push_back(map_waypoints_x[(next_waypoint_index+i) % num_waypoints]);
 						coarse_waypoints_y.push_back(map_waypoints_y[(next_waypoint_index+i) % num_waypoints]);
 					}
+
+					cout << "coarse x: ";
+					for (auto x: coarse_waypoints_x) cout << x << ", ";
+					cout << endl;
+
+
 					// correct for wrap in s values
 					for (int i = 1; i < coarse_waypoints_s.size(); i++) {
 						if (coarse_waypoints_s[i] < coarse_waypoints_s[i-1]) {
@@ -318,9 +322,21 @@ int main() {
 					interpolated_waypoints_y = interpolate_points(coarse_waypoints_s, coarse_waypoints_y, 
 																												 dist_inc, num_interpolation_points);
 
-					// get rid of this
-					next_x_vals = interpolated_waypoints_x;
-					next_y_vals = interpolated_waypoints_y;
+					cout << "first 30 interpolated x: ";
+					for (int i = 0; i < 30; i++) cout << interpolated_waypoints_x[i] << ", ";
+					cout << endl;
+
+					// get next waypoint from current car position
+					int next_waypoint_index_interpolated = NextWaypoint(pos_x, pos_y, angle, 																	interpolated_waypoints_x, interpolated_waypoints_y);
+
+					for (int i = 0; i < 50 - path_size; i ++) {
+						next_x_vals.push_back(interpolated_waypoints_x[next_waypoint_index_interpolated+i]);
+						next_y_vals.push_back(interpolated_waypoints_y[next_waypoint_index_interpolated+i]);
+					}
+
+					cout << "next x: ";
+					for (auto x: next_x_vals) cout << x << ", ";
+					cout << endl;
 
 					msgJson["next_x"] = next_x_vals;
 					msgJson["next_y"] = next_y_vals;
