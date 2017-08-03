@@ -240,11 +240,9 @@ int main() {
 					vector<double> next_x_vals;
 					vector<double> next_y_vals;
 
-					// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-
-					double pos_x;
-					double pos_y;
-					double angle;
+					// Vehicle class requires d, s, v, a - in that order
+					double pos_x, pos_y, angle, pos_s, pos_d, vel, accel;
+					double pos_x2, pos_y2, pos_x3, pos_y3, vel2;  // for calculating vel & accel
 					int path_size = min(PREVIOUS_PATH_POINTS_TO_KEEP, (int)previous_path_x.size());
 
 					// add previous path, if any, to next path
@@ -252,79 +250,88 @@ int main() {
 						next_x_vals.push_back(previous_path_x[i]);
 						next_y_vals.push_back(previous_path_y[i]);
 					}
-
-					if(path_size < 2) {
+					if (path_size < 2) {
 						pos_x = car_x;
 						pos_y = car_y;
 						angle = deg2rad(car_yaw);
+						vel = 0;
+						accel = 0;
 					} else {
 						// consider current position to be end of previous path
 						pos_x = previous_path_x[path_size-1];
 						pos_y = previous_path_y[path_size-1];
-
-						double pos_x2 = previous_path_x[path_size-2];
-						double pos_y2 = previous_path_y[path_size-2];
+						pos_x2 = previous_path_x[path_size-2];
+						pos_y2 = previous_path_y[path_size-2];
 						angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
+						vel = sqrt(pow(pos_x - pos_x2, 2) + pow(pos_y - pos_y2, 2));
 					}
+					if(path_size > 2) {
+						pos_x3 = previous_path_x[path_size-2];
+						pos_y3 = previous_path_y[path_size-2];
+						vel2 = sqrt(pow(pos_x3 - pos_x2, 2) + pow(pos_y3 - pos_y2, 2));
+						accel = vel - vel2;
+					}						
 
-					cout << "x: " << pos_x << ", y: " << pos_y << ", angle: " << angle << endl;
-
-					double dist_inc = 0.5;					
-
-					/********************* simple, drive straight example *********************
-					for(int i = 0; i < 50; i++) {
-						next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
-						next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
-					}
-					***************************************************************************/
-
-					/************************ drive in circles example ************************
-					for(int i = 0; i < 50-path_size; i++) {    
-						next_x_vals.push_back(pos_x+(dist_inc)*cos(angle+(i+1)*(pi()/100)));
-						next_y_vals.push_back(pos_y+(dist_inc)*sin(angle+(i+1)*(pi()/100)));
-						pos_x += (dist_inc)*cos(angle+(i+1)*(pi()/100));
-						pos_y += (dist_inc)*sin(angle+(i+1)*(pi()/100));
-					}
-					***************************************************************************/
-
+					//********************** CONSTRUCT INTERPOLATED WAYPOINTS OF NEARBY AREA **********************
+					int num_waypoints_behind = 2, num_wayopints_ahead = 3;
 					int num_waypoints = map_waypoints_x.size();
 					int next_waypoint_index = NextWaypoint(pos_x, pos_y, angle, map_waypoints_x, 																											 map_waypoints_y);
 					vector<double> coarse_waypoints_s, coarse_waypoints_x, coarse_waypoints_y;
-					for (int i = -2; i < 3; i++) {
-						// for smooting, take two previous and three subsequent waypoints
+					for (int i = -num_waypoints_behind; i < num_waypoints_ahead; i++) {
+						// for smooting, take so many previous and so many subsequent waypoints
 						coarse_waypoints_s.push_back(map_waypoints_s[(next_waypoint_index+i) % num_waypoints]);
 						coarse_waypoints_x.push_back(map_waypoints_x[(next_waypoint_index+i) % num_waypoints]);
 						coarse_waypoints_y.push_back(map_waypoints_y[(next_waypoint_index+i) % num_waypoints]);
 					}
-
-					cout << "coarse x: ";
-					for (auto x: coarse_waypoints_x) cout << x << ", ";
-					cout << endl;
-
-
 					// correct for wrap in s values
 					for (int i = 1; i < coarse_waypoints_s.size(); i++) {
 						if (coarse_waypoints_s[i] < coarse_waypoints_s[i-1]) {
 							coarse_waypoints_s[i] += TRACK_LENGTH;
 						}
 					}
-
-					// interpolation parameters, 240 points a 0.5 distance increment
+					// interpolation parameters, 240 points at 0.5 distance increment = 120 m = 4 30-m sections
+					double dist_inc = 0.5;	
 					int num_interpolation_points = 240;
 					vector<double> interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y;
-					// interpolated s is simply..
+					// interpolated s is simply...
 					interpolated_waypoints_s.push_back(coarse_waypoints_s[0]);
 					for (int i = 1; i < num_interpolation_points; i++) {
 						interpolated_waypoints_s.push_back(coarse_waypoints_s[0] + i * dist_inc);
 					}
-					interpolated_waypoints_x = interpolate_points(coarse_waypoints_s, coarse_waypoints_x, 
-																												 dist_inc, num_interpolation_points);
-					interpolated_waypoints_y = interpolate_points(coarse_waypoints_s, coarse_waypoints_y, 
-																												 dist_inc, num_interpolation_points);
+					interpolated_waypoints_x = interpolate_points(coarse_waypoints_s, coarse_waypoints_x, dist_inc, num_interpolation_points);
+					interpolated_waypoints_y = interpolate_points(coarse_waypoints_s, coarse_waypoints_y, dist_inc, num_interpolation_points);
 
-					cout << "first 30 interpolated x: ";
-					for (int i = 0; i < 30; i++) cout << interpolated_waypoints_x[i] << ", ";
-					cout << endl;
+					//***************** DETERMINE EGO CAR PARAMETERS AND CONSTRUCT VEHICLE OBJECT ******************
+					vector<double> frenet = getFrenet(pos_x, pos_y, angle, interpolated_waypoints_x, interpolated_waypoints_y);
+					Vehicle my_car = Vehicle(frenet[1], frenet[0], vel, accel);
+
+					//********************** GENERATE PREDICTIONS FROM SENSOR FUSION DATA **************************
+					//
+					map<int, vector<vector<int>> > predictions;
+					for (auto sf: sensor_fusion) {
+						int v_id = sf[0];
+						vector<vector<int> > preds = it->second.generate_predictions(10);
+						predictions[v_id] = preds; << ", dist: " << distance(pos_x, pos_y, sf[1], sf[2]) << endl;
+					map<int, Vehicle>::iterator it = this->vehicles.begin();
+						while(it != this->vehicles.end())
+						{
+								int v_id = it->first;
+								
+								it++;
+						}
+					it = this->vehicles.begin();
+					while(it != this->vehicles.end())
+						{
+							int v_id = it->first;
+								if(v_id == ego_key)
+								{
+									it->second.update_state(predictions);
+									it->second.realize_state(predictions);
+								}
+								it->second.increment(1);
+								
+								it++;
+						}
 
 					// get next waypoint from current car position
 					int next_waypoint_index_interpolated = NextWaypoint(pos_x, pos_y, angle, 																	interpolated_waypoints_x, interpolated_waypoints_y);
@@ -334,8 +341,27 @@ int main() {
 						next_y_vals.push_back(interpolated_waypoints_y[next_waypoint_index_interpolated+i]);
 					}
 
-					cout << "next x: ";
+					/********************* simple, drive straight example *********************
+					for(int i = 0; i < 50; i++) {
+						next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
+						next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
+					}
+					***************************************************************************/
+					/************************ drive in circles example ************************
+					for(int i = 0; i < 50-path_size; i++) {    
+						next_x_vals.push_back(pos_x+(dist_inc)*cos(angle+(i+1)*(pi()/100)));
+						next_y_vals.push_back(pos_y+(dist_inc)*sin(angle+(i+1)*(pi()/100)));
+						pos_x += (dist_inc)*cos(angle+(i+1)*(pi()/100));
+						pos_y += (dist_inc)*sin(angle+(i+1)*(pi()/100));
+					}
+					***************************************************************************/
+
+					cout << "next x: " << endl;
 					for (auto x: next_x_vals) cout << x << ", ";
+					cout << endl;
+
+					cout << "sensor fusion: " << endl;
+					for (auto sf: sensor_fusion) cout << "id: " << sf[0] << ", dist: " << distance(pos_x, pos_y, sf[1], sf[2]) << endl;
 					cout << endl;
 
 					msgJson["next_x"] = next_x_vals;
