@@ -240,42 +240,10 @@ int main() {
 					vector<double> next_x_vals;
 					vector<double> next_y_vals;
 
-					// Vehicle class requires d, s, v, a - in that order
-					double pos_x, pos_y, angle, pos_s, pos_d, vel, accel;
-					double pos_x2, pos_y2, pos_x3, pos_y3, vel2;  // for calculating vel & accel
-					int path_size = min(PREVIOUS_PATH_POINTS_TO_KEEP, (int)previous_path_x.size());
-
-					// add previous path, if any, to next path
-					for(int i = 0; i < path_size; i++) {
-						next_x_vals.push_back(previous_path_x[i]);
-						next_y_vals.push_back(previous_path_y[i]);
-					}
-					if (path_size < 2) {
-						pos_x = car_x;
-						pos_y = car_y;
-						angle = deg2rad(car_yaw);
-						vel = 0;
-						accel = 0;
-					} else {
-						// consider current position to be end of previous path
-						pos_x = previous_path_x[path_size-1];
-						pos_y = previous_path_y[path_size-1];
-						pos_x2 = previous_path_x[path_size-2];
-						pos_y2 = previous_path_y[path_size-2];
-						angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
-						vel = sqrt(pow(pos_x - pos_x2, 2) + pow(pos_y - pos_y2, 2));
-					}
-					if(path_size > 2) {
-						pos_x3 = previous_path_x[path_size-2];
-						pos_y3 = previous_path_y[path_size-2];
-						vel2 = sqrt(pow(pos_x3 - pos_x2, 2) + pow(pos_y3 - pos_y2, 2));
-						accel = vel - vel2;
-					}						
-
 					//********************** CONSTRUCT INTERPOLATED WAYPOINTS OF NEARBY AREA **********************
 					int num_waypoints_behind = 2, num_wayopints_ahead = 3;
 					int num_waypoints = map_waypoints_x.size();
-					int next_waypoint_index = NextWaypoint(pos_x, pos_y, angle, map_waypoints_x, 																											 map_waypoints_y);
+					int next_waypoint_index = NextWaypoint(pos_x, pos_y, angle, map_waypoints_x, map_waypoints_y);
 					vector<double> coarse_waypoints_s, coarse_waypoints_x, coarse_waypoints_y;
 					for (int i = -num_waypoints_behind; i < num_waypoints_ahead; i++) {
 						// for smooting, take so many previous and so many subsequent waypoints
@@ -302,15 +270,70 @@ int main() {
 					interpolated_waypoints_y = interpolate_points(coarse_waypoints_s, coarse_waypoints_y, dist_inc, num_interpolation_points);
 
 					//***************** DETERMINE EGO CAR PARAMETERS AND CONSTRUCT VEHICLE OBJECT ******************
-					vector<double> frenet = getFrenet(pos_x, pos_y, angle, interpolated_waypoints_x, interpolated_waypoints_y);
-					Vehicle my_car = Vehicle(frenet[1], frenet[0], vel, accel);
+					// Vehicle class requires s,s_d,s_dd,d,d_d,d_dd - in that order
+					double pos_s, s_dot, s_ddot;
+					double pos_d, d_dot, d_ddot;
+					// Other values necessary for determining these based on future points in previous path
+					double pos_x, pos_y, angle;
+					double timestep = 0.2;
+
+					// add previous path, if any, to next path
+					int path_size = min(PREVIOUS_PATH_POINTS_TO_KEEP, (int)previous_path_x.size());
+					for(int i = 0; i < path_size; i++) {
+						next_x_vals.push_back(previous_path_x[i]);
+						next_y_vals.push_back(previous_path_y[i]);
+					}
+					// use default values if not enough previous path points
+					if (path_size < 4) {
+						pos_x = car_x;
+						pos_y = car_y;
+						angle = deg2rad(car_yaw);
+						pos_s = car_s;
+						pos_d = car_d;
+						s_dot = car_speed;
+						d_dot = 0;
+						s_ddot = 0;
+						d_ddot = 0;
+					} else {
+						// consider current position to be end of previous path
+						pos_x = previous_path_x[path_size-1];
+						pos_y = previous_path_y[path_size-1];
+						double pos_x2 = previous_path_x[path_size-2];
+						double pos_y2 = previous_path_y[path_size-2];
+						angle = atan2(pos_y-pos_y2,pos_x-pos_x2);vector<double> frenet = getFrenet(pos_x, pos_y, angle, interpolated_waypoints_x, interpolated_waypoints_y);
+						pos_s = frenet[0];
+						pos_d = frenet[1];
+
+						double pos_x3 = previous_path_x[path_size-3];
+						double pos_y3 = previous_path_y[path_size-3];
+						double angle2 = atan2(pos_y2-pos_y3,pos_x2-pos_x3);
+						frenet = getFrenet(pos_x2, pos_y2, angle2, interpolated_waypoints_x, interpolated_waypoints_y);
+						double pos_s2 = frenet[0];
+						double pos_d2 = frenet[1];
+						s_dot = (pos_s - pos_s2) / timestep;
+						d_dot = (pos_d - pos_d2) / timestep;
+						
+						double pos_x4 = previous_path_x[path_size-4];
+						double pos_y4 = previous_path_y[path_size-4];
+						double angle3 = atan2(pos_y3-pos_y4,pos_x3-pos_x4);
+						frenet = getFrenet(pos_x3, pos_y3, angle3, interpolated_waypoints_x, interpolated_waypoints_y);
+						double pos_s3 = frenet[0];
+						double pos_d3 = frenet[1];
+						double s_d2 = (pos_s2 - pos_s3) / timestep;
+						double d_d2 = (pos_d2 - pos_d3) / timestep;
+						s_ddot = (s_d - s_d2) / timestep;
+						d_ddot = (d_d - d_d2) / timestep;
+					}		
+
+					
+					Vehicle my_car = Vehicle(pos_s, s_dot, s_ddot, pos_d, d_dot, d_ddot);
 
 					//********************** GENERATE PREDICTIONS FROM SENSOR FUSION DATA **************************
 					vector<Vehicle> other_cars;
 					map<int, vector<vector<double>> > predictions;
 					for (auto sf: sensor_fusion) {
 						double other_car_vel = sqrt(pow(sf[3], 2) + pow(sf[4], 2));
-						Vehicle other_car = Vehicle(sf[6], sf[5], other_car_vel, 0);
+						Vehicle other_car = Vehicle(sf[5], other_car_vel, 0, sf[5], 0, 0);
 						int v_id = sf[0];
 						vector<vector<int> > preds = other_car.generate_predictions(10);
 						predictions[v_id] = preds;
