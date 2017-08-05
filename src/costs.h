@@ -18,6 +18,17 @@ double logistic(double x){
   return 2.0 / (1 + exp(-x)) - 1.0;
 }
 
+double nearest_approach(vector<double> s_traj, vector<double> d_traj, vector<vector<double>> predictions) {
+  double closest = 999999;
+  for (i = 0; i < N_SAMPLES; i++) {
+    double current_dist = sqrt(pow(s_traj[i] - predictions[i][0], 2) + pow(d_traj[i] - predictions[i][1], 2));
+    if (current_dist < closest) {
+      closest = current_dist;
+    }
+  }
+  return closest;
+}
+
 double nearest_approach_to_any_vehicle(vector<double> s_traj, vector<double> d_traj, map<int,vector<vector<double>>> predictions) {
   // Determines the nearest the vehicle comes to any other vehicle throughout a trajectory
   double closest = 999999;
@@ -30,43 +41,16 @@ double nearest_approach_to_any_vehicle(vector<double> s_traj, vector<double> d_t
   return closest;
 }
 
-double nearest_approach(vector<double> s_traj, vector<double> d_traj, vector<vector<double>> predictions) {
-  double closest = 999999;
-  for (i = 0; i < N_SAMPLES; i++) {
-    double current_dist = sqrt(pow(s_traj[i] - predictions[i][0], 2) + pow(d_traj[i] - predictions[i][1], 2));
-    if (current_dist < closest) {
-      closest = current_dist;
-    }
+vector<double> velocities_for_trajectory(vector<double> traj) {
+  // given a trajectory (a vector of positions), return the average velocity between each pair as a vector
+  // also can be used to find accelerations from velocities, jerks from accelerations, etc.
+  // (i.e. discrete derivatives)
+  vector<double> velocities;
+  for (i = 1; i < traj.size(); i++) {
+    velocities.push_back((traj[i] - traj[i-1]) / DT);
   }
-  return closest;
+  return velocities;
 }
-
-
-def nearest_approach_to_any_vehicle(traj, vehicles):
-    """
-    Calculates the closest distance to any vehicle during a trajectory.
-    """
-    closest = 999999
-    for v in vehicles.values():
-        d = nearest_approach(traj,v)
-        if d < closest:
-            closest = d
-    return closest
-
-def nearest_approach(traj, vehicle):
-    closest = 999999
-    s_,d_,T = traj
-    s = to_equation(s_)
-    d = to_equation(d_)
-    for i in range(100):
-        t = float(i) / 100 * T
-        cur_s = s(t)
-        cur_d = d(t)
-        targ_s, _, _, targ_d, _, _ = vehicle.state_in(t)
-        dist = sqrt((cur_s-targ_s)**2 + (cur_d-targ_d)**2)
-        if dist < closest:
-            closest = dist
-    return closest
 
 
 // COST FUNCTIONS
