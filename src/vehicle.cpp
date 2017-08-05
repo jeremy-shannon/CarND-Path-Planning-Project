@@ -201,12 +201,12 @@ void Vehicle::realize_lane_change(map<int,vector< vector<double> > > predictions
     this->a = _max_accel_for_lane(predictions, d, s);
 }
 
-vector<vector<double> > Vehicle::generate_predictions(int horizon = 10) {
+vector<vector<double>> Vehicle::generate_predictions() {
 
-    vector<vector<double> > predictions;
-    for( int i = 0; i < horizon; i++)
+    vector<vector<double>> predictions;
+    for( int i = 0; i < N_SAMPLES; i++)
     {
-        double at_time = i * 0.2
+        double at_time = i * DT
         vector<double> check1 = state_at(at_time);
         vector<double> d_and_s = {check1[0], check1[1]};
         predictions.push_back(d_and_s);
