@@ -19,9 +19,54 @@ double logistic(double x){
 }
 
 double nearest_approach_to_any_vehicle(vector<double> s_traj, vector<double> d_traj, map<int,vector<vector<double>>> predictions) {
-  // TODO
+  // Determines the nearest the vehicle comes to any other vehicle throughout a trajectory
+  double closest = 999999;
+  for (auto prediction : predictions) {
+    double current_dist = nearest_approach(s_traj, d_traj, prediction->second());
+    if (current_dist < closest) {
+      closest = current_dist;
+    }
+  }
+  return closest;
 }
 
+double nearest_approach(vector<double> s_traj, vector<double> d_traj, vector<vector<double>> predictions) {
+  double closest = 999999;
+  for (i = 0; i < N_SAMPLES; i++) {
+    double current_dist = sqrt(pow(s_traj[i] - predictions[i][0], 2) + pow(d_traj[i] - predictions[i][1], 2));
+    if (current_dist < closest) {
+      closest = current_dist;
+    }
+  }
+  return closest;
+}
+
+
+def nearest_approach_to_any_vehicle(traj, vehicles):
+    """
+    Calculates the closest distance to any vehicle during a trajectory.
+    """
+    closest = 999999
+    for v in vehicles.values():
+        d = nearest_approach(traj,v)
+        if d < closest:
+            closest = d
+    return closest
+
+def nearest_approach(traj, vehicle):
+    closest = 999999
+    s_,d_,T = traj
+    s = to_equation(s_)
+    d = to_equation(d_)
+    for i in range(100):
+        t = float(i) / 100 * T
+        cur_s = s(t)
+        cur_d = d(t)
+        targ_s, _, _, targ_d, _, _ = vehicle.state_in(t)
+        dist = sqrt((cur_s-targ_s)**2 + (cur_d-targ_d)**2)
+        if dist < closest:
+            closest = dist
+    return closest
 
 
 // COST FUNCTIONS
