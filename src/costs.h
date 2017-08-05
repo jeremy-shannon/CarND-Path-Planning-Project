@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include "constants.h"
 
 using namespace std;
 
@@ -22,14 +23,14 @@ double time_diff_cost(double target_time, double actual_time) {
   return logistic(fabs(actual_time - target_time) / target_time);
 }
 
-double traj_diff_cost(vector<double> s_trajectory, vector<double> target_s, vector<double> sigma_s, double timestep) {
+double traj_diff_cost(vector<double> s_traj, vector<double> target_s, vector<double> sigma_s, double timestep) {
   // Penalizes trajectories whose s coordinate (and derivatives) differ from the goal. Target is s, s_dot, and s_ddot.
   // can be used for d trajectories as well (or any other 1-d trajectory)
-  int s_end = s_trajectory.size();
+  int s_end = s_traj.size();
   double s1, s2, s3, s_dot1, s_dot2, s_ddot, cost = 0;
-  s1 = s_trajectory[s_end - 1];
-  s2 = s_trajectory[s_end - 2];
-  s3 = s_trajectory[s_end - 3];
+  s1 = s_traj[s_end - 1];
+  s2 = s_traj[s_end - 2];
+  s3 = s_traj[s_end - 3];
   s_dot1 = (s1 - s2) / timestep;
   s_dot2 = (s2 - s3) / timestep;
   s_ddot = (s_dot1 - s_dot2) / timestep;
@@ -39,24 +40,23 @@ double traj_diff_cost(vector<double> s_trajectory, vector<double> target_s, vect
   return logistic(cost);
 }
 
-double collision_cost(traj, target_vehicle, delta, T, predictions) { /*
+double collision_cost(vector<double> s_traj, vector<double> d_traj, map<int,vector<vector<double>>> predictions) {
   // Binary cost function which penalizes collisions.
-  nearest = nearest_approach_to_any_vehicle(traj, predictions)
-  if nearest < 2 * VEHICLE_RADIUS : return 1.0
-  else : return 0.0
-
+  double nearest = nearest_approach_to_any_vehicle(s_traj, d_traj, predictions);
+  if (nearest < 2 * VEHICLE_RADIUS) {
+    return 1.0;
+  } else { 
+    return 0.0;
+  }
 }
-def buffer_cost(traj, target_vehicle, delta, T, predictions) :
-"""
-Penalizes getting close to other vehicles.
-"""
-nearest = nearest_approach_to_any_vehicle(traj, predictions)
-return logistic(2 * VEHICLE_RADIUS / nearest)
 
-def stays_on_road_cost(traj, target_vehicle, delta, T, predictions) :
-pass
+double buffer_cost(vector<double> s_traj, vector<double> d_traj, map<int,vector<vector<double>>> predictions) {
+  // Penalizes getting close to other vehicles.
+  double nearest = nearest_approach_to_any_vehicle(s_traj, d_traj, predictions);
+  return logistic(2 * VEHICLE_RADIUS / nearest);
+}
 
-def exceeds_speed_limit_cost(traj, target_vehicle, delta, T, predictions) :
+double exceeds_speed_limit_cost(traj, target_vehicle, delta, T, predictions) :
 pass
 
 def efficiency_cost(traj, target_vehicle, delta, T, predictions) :
@@ -104,7 +104,7 @@ jerk = differentiate(s_d_dot)
 jerk = to_equation(jerk)
 all_jerks = [jerk(float(T) / 100 * i) for i in range(100)]
 max_jerk = max(all_jerks, key = abs)
-if abs(max_jerk) > MAX_JERK: return 1
+if abs(max_jerk) > MAX_INSTANTANEOUS_JERK: return 1
 else: return 0
 
 def total_jerk_cost(traj, target_vehicle, delta, T, predictions) :
