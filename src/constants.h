@@ -1,11 +1,11 @@
 #ifndef CONSTANTS
 #define CONSTANTS
 
-#define VEHICLE_RADIUS 1.7
+#define VEHICLE_RADIUS 1.5              // meters
 
 #define PREVIOUS_PATH_POINTS_TO_KEEP 10
 
-#define TRACK_LENGTH 6945.554
+#define TRACK_LENGTH 6945.554           // meters
 
 #define N_SAMPLES = 50
 #define DT = 0.2                        // seconds
