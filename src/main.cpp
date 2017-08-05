@@ -10,11 +10,11 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
 #include "smoother.h"
+#include "constants.h"
+#include "costs.h"
 
 using namespace std;
 
-#define PREVIOUS_PATH_POINTS_TO_KEEP 10
-#define TRACK_LENGTH 6945.554
 
 // for convenience
 using json = nlohmann::json;
