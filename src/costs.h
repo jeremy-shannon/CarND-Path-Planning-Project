@@ -10,11 +10,19 @@
 
 using namespace std;
 
+// UTILITY FUNCTIONS
+
 double logistic(double x){
   // A function that returns a value between 0 and 1 for x in the range[0, infinity] and - 1 to 1 for x in 
   // the range[-infinity, infinity]. Useful for cost functions.
   return 2.0 / (1 + exp(-x)) - 1.0;
 }
+
+double nearest_approach_to_any_vehicle(vector<double> s_traj, vector<double> d_traj, map<int,vector<vector<double>>> predictions) {
+  // TODO
+}
+
+
 
 // COST FUNCTIONS
 
@@ -23,7 +31,7 @@ double time_diff_cost(double target_time, double actual_time) {
   return logistic(fabs(actual_time - target_time) / target_time);
 }
 
-double traj_diff_cost(vector<double> s_traj, vector<double> target_s, vector<double> sigma_s, double timestep) {
+double traj_diff_cost(vector<double> s_traj, vector<double> target_s) {
   // Penalizes trajectories whose s coordinate (and derivatives) differ from the goal. Target is s, s_dot, and s_ddot.
   // can be used for d trajectories as well (or any other 1-d trajectory)
   int s_end = s_traj.size();
@@ -44,9 +52,9 @@ double collision_cost(vector<double> s_traj, vector<double> d_traj, map<int,vect
   // Binary cost function which penalizes collisions.
   double nearest = nearest_approach_to_any_vehicle(s_traj, d_traj, predictions);
   if (nearest < 2 * VEHICLE_RADIUS) {
-    return 1.0;
+    return 1;
   } else { 
-    return 0.0;
+    return 0;
   }
 }
 
@@ -56,75 +64,99 @@ double buffer_cost(vector<double> s_traj, vector<double> d_traj, map<int,vector<
   return logistic(2 * VEHICLE_RADIUS / nearest);
 }
 
-double exceeds_speed_limit_cost(traj, target_vehicle, delta, T, predictions) :
-pass
+double exceeds_speed_limit_cost(vector<double> s_traj) {
+  // Penalty if ds/dt for any two points in trajectory is greater than SPEED_LIMIT
+  vector<double> s_dot_traj = velocities_for_trajectory(s_traj);
+  for (double s_dot : s_dot_traj) {
+    if (s_dot > SPEED_LIMIT) {
+      return 1;
+    }
+  }
+  return 0;
+}
 
-def efficiency_cost(traj, target_vehicle, delta, T, predictions) :
-"""
-Rewards high average speeds.
-"""
-s, _, t = traj
-s = to_equation(s)
-avg_v = float(s(t)) / t
-targ_s, _, _, _, _, _ = predictions[target_vehicle].state_in(t)
-targ_v = float(targ_s) / t
-return logistic(2 * float(targ_v - avg_v) / avg_v)
+double efficiency_cost(vector<double> s_traj) {
+  // Rewards high average speeds.
+  vector<double> s_dot_traj = velocities_for_trajectory(s_traj);
+  double total = 0;
+  for (double s_dot: s_dot_traj) {
+    total += s_dot;
+  }
+  double avg_vel = total / s_dot_traj.size();
+  return logistic(2 * (SPEED_LIMIT - avg_vel) / avg_vel);
+} 
 
-def max_accel_cost(traj, target_vehicle, delta, T, predictions) :
-s, d, t = traj
-s_dot = differentiate(s)
-s_d_dot = differentiate(s_dot)
-a = to_equation(s_d_dot)
-total_acc = 0
-dt = float(T) / 100.0
-for i in range(100) :
-t = dt * i
-acc = a(t)
-total_acc += abs(acc*dt)
-acc_per_second = total_acc / T
+double max_accel_cost(vector<double> s_traj) {
+  // Penalize exceeding MAX_INSTANTANEOUS_ACCEL
+  vector<double> s_dot_traj = velocities_for_trajectory(s_traj);
+  vector<double> s_ddot_traj = velocities_for_trajectory(s_dot_traj);
+  for (double s_ddot : s_ddot_traj) {
+    if (s_ddot > MAX_INSTANTANEOUS_ACCEL) {
+      return 1;
+    }
+  }
+  return 0;
+}
 
-return logistic(acc_per_second / EXPECTED_ACC_IN_ONE_SEC)
+double avg_accel_cost(vector<double> s_traj) {
+  // Penalize higher average acceleration
+  vector<double> s_dot_traj = velocities_for_trajectory(s_traj);
+  vector<double> s_ddot_traj = velocities_for_trajectory(s_dot_traj);
+  double total = 0;
+  for (double s_ddot: s_ddot_traj) {
+    total += s_ddot;
+  }
+  double avg_accel = total / s_ddot_traj.size();
+  return logistic(avg_accel / EXPECTED_ACC_IN_ONE_SEC );
+}
 
-def total_accel_cost(traj, target_vehicle, delta, T, predictions) :
-s, d, t = traj
-s_dot = differentiate(s)
-s_d_dot = differentiate(s_dot)
-a = to_equation(s_d_dot)
-all_accs = [a(float(T) / 100 * i) for i in range(100)]
-max_acc = max(all_accs, key = abs)
-if abs(max_acc) > MAX_ACCEL: return 1
-else: return 0
+double max_jerk_cost(vector<double> s_traj) {
+  // Penalize exceeding MAX_INSTANTANEOUS_JERK
+  vector<double> s_dot_traj = velocities_for_trajectory(s_traj);
+  vector<double> s_ddot_traj = velocities_for_trajectory(s_dot_traj);
+  vector<double> s_dddot_traj = velocities_for_trajectory(s_ddot_traj);
+  for (double s_dddot : s_dddot_traj) {
+    if (s_dddot > MAX_INSTANTANEOUS_JERK) {
+      return 1;
+    }
+  }
+  return 0;
+}
 
+double avg_jerk_cost(vector<double> s_traj) {
+  // Penalize higher average jerk
+  vector<double> s_dot_traj = velocities_for_trajectory(s_traj);
+  vector<double> s_ddot_traj = velocities_for_trajectory(s_dot_traj);
+  vector<double> s_dddot_traj = velocities_for_trajectory(s_ddot_traj);
+  double total = 0;
+  for (double s_dddot: s_dddot_traj) {
+    total += s_dddot;
+  }
+  double avg_jerk = total / s_dddot_traj.size();
+  return logistic(avg_a / EXPECTED_ACC_IN_ONE_SEC );
+}
 
-def max_jerk_cost(traj, target_vehicle, delta, T, predictions) :
-s, d, t = traj
-s_dot = differentiate(s)
-s_d_dot = differentiate(s_dot)
-jerk = differentiate(s_d_dot)
-jerk = to_equation(jerk)
-all_jerks = [jerk(float(T) / 100 * i) for i in range(100)]
-max_jerk = max(all_jerks, key = abs)
-if abs(max_jerk) > MAX_INSTANTANEOUS_JERK: return 1
-else: return 0
+double calculate_total_cost(vector<double> s_traj, vector<double> d_traj, map<int,vector<vector<double>>> predictions, vector<double> target_s, vector<double> target_d, double target_time, double actual_time) {
 
-def total_jerk_cost(traj, target_vehicle, delta, T, predictions) :
-s, d, t = traj
-s_dot = differentiate(s)
-s_d_dot = differentiate(s_dot)
-jerk = to_equation(differentiate(s_d_dot))
-total_jerk = 0
-dt = float(T) / 100.0
-for i in range(100) :
-t = dt * i
-j = jerk(t)
-total_jerk += abs(j*dt)
-jerk_per_second = total_jerk / T
-return logistic(jerk_per_second / EXPECTED_JERK_IN_ONE_SEC)
+  double total_cost = 0;
 
-*/
+  total_cost += time_diff_cost(target_time, actual_time) * TIME_DIFF_COST_WEIGHT;
+  total_cost += traj_diff_cost(s_traj, target_s) * TRAJ_DIFF_COST_WEIGHT;
+  total_cost += traj_diff_cost(d_traj, target_d) * TRAJ_DIFF_COST_WEIGHT;
+  total_cost += collision_cost(s_traj, d_traj, predictions) * COLLISION_COST_WEIGHT;
+  total_cost += buffer_cost(s_traj, d_traj, predictions) * BUFFER_COST_WEIGHT;
+  total_cost += exceeds_speed_limit_cost(s_traj) * SPEED_LIMIT_COST_WEIGHT;
+  total_cost += efficiency_cost(s_traj) * EFFICIENCY_COST_WEIGHT;
+  total_cost += max_accel_cost(s_traj) * MAX_ACCEL_COST_WEIGHT;
+  total_cost += avg_accel_cost(s_traj) * AVG_ACCEL_COST_WEIGHT;
+  total_cost += max_accel_cost(d_traj) * MAX_ACCEL_COST_WEIGHT;
+  total_cost += avg_accel_cost(d_traj) * AVG_ACCEL_COST_WEIGHT;
+  total_cost += max_jerk_cost(s_traj) * MAX_JERK_COST_WEIGHT;
+  total_cost += avg_jerk_cost(s_traj) * AVG_JERK_COST_WEIGHT;
+  total_cost += max_jerk_cost(d_traj) * MAX_JERK_COST_WEIGHT;
+  total_cost += avg_jerk_cost(d_traj) * AVG_JERK_COST_WEIGHT;
 
-
-
-
+  return total_cost;
+}
 
 #endif
