@@ -10,6 +10,7 @@
 #include <map>
 #include <string>
 #include <iterator>
+#include "constants.h"
 
 using namespace std;
 
@@ -23,7 +24,6 @@ public:
 
   };
 
-  double L = 1.7;  // vehicle "size"
 
   double s;
   double s_d;
