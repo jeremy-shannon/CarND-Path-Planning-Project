@@ -4,6 +4,7 @@
 #define VEHICLE_RADIUS 1.5              // meters
 
 #define PREVIOUS_PATH_POINTS_TO_KEEP 10
+#define NEW_PATH_POINTS_TO_ADD 40
 
 #define TRACK_LENGTH 6945.554           // meters
 
