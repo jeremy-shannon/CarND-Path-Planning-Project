@@ -11,6 +11,8 @@
 #define N_SAMPLES = 150
 #define DT = 0.02                       // seconds
 
+#define NUM_RANDOM_TRAJ_TO_GEN          // the number of perturbed trajectories to generate (for each duration)
+
 // sigma values for perturbing targets
 #define SIGMA_S = 10.0                  // s
 #define SIGMA_S_DOT = 4.0               // s_dot
