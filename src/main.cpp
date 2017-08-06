@@ -15,7 +15,6 @@
 
 using namespace std;
 
-
 // for convenience
 using json = nlohmann::json;
 
@@ -246,14 +245,9 @@ int main() {
 					double pos_d, d_dot, d_ddot;
 					// Other values necessary for determining these based on future points in previous path
 					double pos_x, pos_y, angle;
-					double timestep = 0.2;
 
-					// add previous path, if any, to next path
 					int path_size = min(PREVIOUS_PATH_POINTS_TO_KEEP, (int)previous_path_x.size());
-					for(int i = 0; i < path_size; i++) {
-						next_x_vals.push_back(previous_path_x[i]);
-						next_y_vals.push_back(previous_path_y[i]);
-					}
+
 					// use default values if not enough previous path points
 					if (path_size < 4) {
 						pos_x = car_x;
@@ -281,8 +275,8 @@ int main() {
 						frenet = getFrenet(pos_x2, pos_y2, angle2, interpolated_waypoints_x, interpolated_waypoints_y);
 						double pos_s2 = frenet[0];
 						double pos_d2 = frenet[1];
-						s_dot = (pos_s - pos_s2) / timestep;
-						d_dot = (pos_d - pos_d2) / timestep;
+						s_dot = (pos_s - pos_s2) / DT;
+						d_dot = (pos_d - pos_d2) / DT;
 						
 						double pos_x4 = previous_path_x[path_size-4];
 						double pos_y4 = previous_path_y[path_size-4];
@@ -290,12 +284,11 @@ int main() {
 						frenet = getFrenet(pos_x3, pos_y3, angle3, interpolated_waypoints_x, interpolated_waypoints_y);
 						double pos_s3 = frenet[0];
 						double pos_d3 = frenet[1];
-						double s_d2 = (pos_s2 - pos_s3) / timestep;
-						double d_d2 = (pos_d2 - pos_d3) / timestep;
-						s_ddot = (s_d - s_d2) / timestep;
-						d_ddot = (d_d - d_d2) / timestep;
+						double s_d2 = (pos_s2 - pos_s3) / DT;
+						double d_d2 = (pos_d2 - pos_d3) / DT;
+						s_ddot = (s_d - s_d2) / DT;
+						d_ddot = (d_d - d_d2) / DT;
 					}		
-
 					
 					Vehicle my_car = Vehicle(pos_s, s_dot, s_ddot, pos_d, d_dot, d_ddot);
 
@@ -310,9 +303,27 @@ int main() {
 						predictions[v_id] = preds;
 					}
 
-					my_car.update_state(predictions);
-					my_car.realize_state(predictions);
-					
+					// ******************************* DETERMINE BEST TRAJECTORY ***********************************
+					// where the magic happens?
+					// trajectories come back in a list of s values and a list of d values (not zipped together)
+					vector<vector<double>> frenet_traj = my_car.get_best_frenet_trajectory(predictions);
+					vector<vector<double>> best_xy_traj;
+
+					// *************************** CONVERT AND PRODUCE NEW TRAJECTORY *****************************
+					// convert NEW_PATH_POINTS_TO_ADD points from frenet trajectory to xy
+					for (int i = 0; i < NEW_PATH_POINTS_TO_ADD; i++) {
+						best_xy_traj.push_back(getXY(frenet_traj[0][i], frenet_traj[1][i], interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y));
+					}
+					// add previous path, if any, to next path
+					for(int i = 0; i < path_size; i++) {
+						next_x_vals.push_back(previous_path_x[i]);
+						next_y_vals.push_back(previous_path_y[i]);
+					}
+					// add xy points from newly generated path
+					for (vector<double> xy : best_xy_traj) {
+						next_x_vals.push_back(xy[0]);
+						next_y_vals.push_back(xy[1]);
+					}
 
 					/********************* simple, drive straight example *********************
 					for(int i = 0; i < 50; i++) {
