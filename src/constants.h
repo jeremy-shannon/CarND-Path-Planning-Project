@@ -10,8 +10,13 @@
 #define N_SAMPLES = 50
 #define DT = 0.2                        // seconds
 
-#define SIGMA_S = {10.0, 4.0, 2.0}      // s, s_dot, s_double_dot
-#define SIGMA_D = {1.0, 1.0, 1.0}
+// sigma values for perturbing targets
+#define SIGMA_S = 10.0                  // s
+#define SIGMA_S_DOT = 4.0               // s_dot
+#define SIGMA_S_DDOT = 2.0              // s
+#define SIGMA_D = 1.0                   // d
+#define SIGMA_D_DOT = 1.0               // d_dot
+#define SIGMA_D_DDOT = 1.0              // d_double_dot
 #define SIGMA_T = 2.0
 
 #define MAX_INSTANTANEOUS_JERK = 10     // m/s/s/s
@@ -23,7 +28,6 @@
 #define SPEED_LIMIT = 22                // m/s
 
 // cost function weights
-
 #define TIME_DIFF_COST_WEIGHT 10
 #define TRAJ_DIFF_COST_WEIGHT 10
 #define COLLISION_COST_WEIGHT 9999
