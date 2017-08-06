@@ -26,26 +26,51 @@ Vehicle::Vehicle(double s, double s_d, double s_dd, double d, double d_d, double
 
 Vehicle::~Vehicle() {}
 
-// TODO - Implement this method.
-void Vehicle::update_available_states() {
-	/*
-    Updates the available "states" based on the current state:
+vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vector<double>>> predictions) {
+    update_available_states();
+    vector<vector<double>> best_frenet_traj;
+    double best_cost = 999999;
+    for (string state : available_states) {
+        // target state (s and d) and time
+        vector<vector<double>> target_s_and_d = get_target_for_state(state);
+        double target_time = N_SAMPLES * DT;
 
+        // Perturb trajectories, first by duration
+        for (int i = -5; i < 6; i++) {
+            current_time = target_time + (i * DT);
+            // Perturb by sigma s and d values
+            for (int i = 0; i < NUM_RANDOM_TRAJ_TO_GEN; i++) {
+                vector<vector<double>> possible_traj = generate_traj_for_target(target_s_and_d);
+                double current_cost = calculate_total_cost(possible_traj[0], possible_traj[1], predictions, target_s_and_d[0], target_s_and_d[1], target_time, current_time)
+
+                if (current_cost < best_cost) {
+                    best_cost = current_cost;
+                    best_frenet_traj = possible_traj;
+                }
+            }
+        }
+        
+    }
+
+}
+
+void Vehicle::update_available_states() {
+	/*  Updates the available "states" based on the current state:
     "KL" - Keep Lane
      - The vehicle will attempt to drive its target speed, unless there is 
        traffic in front of it, in which case it will slow down.
-
     "LCL" or "LCR" - Lane Change Left / Right
      - The vehicle will change lanes and then follow longitudinal
        behavior for the "KL" state in the new lane. */
 
-    vector<string> states = {"KL"};
+    this->available_states = {"KL"};
     if (this->d > 4) {
-        states.push_back("LCL");
+        this->available_states.push_back("LCL");
     }
     if (this->d < 8) {
-        states.push_back("LCR");
+        this->available_states.push_back("LCR");
     }
+
     vector<double> costs;
     double cost;
     for (string test_state : states) {

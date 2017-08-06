@@ -38,17 +38,19 @@ Vehicle::Vehicle(double s, double s_d, double s_dd, double d, double d_d, double
   */
   virtual ~Vehicle();
 
+  vector<vector<double>> get_best_frenet_trajectory(map<int, vector<vector<double>>> predictions);
+
   void update_available_states();
 
   string display();
 
-  void realize_state(map<int, vector<vector<double>> > predictions);
+  void realize_state(map<int, vector<vector<double>>> predictions);
 
-  void realize_keep_lane(map<int, vector<vector<double>> > predictions);
+  void realize_keep_lane(map<int, vector<vector<double>>> predictions);
 
-  void realize_lane_change(map<int, vector<vector<double>> > predictions, string direction);
+  void realize_lane_change(map<int, vector<vector<double>>> predictions, string direction);
 
-  vector<vector<double>> generate_predictions(int horizon);
+  vector<vector<double>> generate_predictions();
 
 };
 
