@@ -8,8 +8,8 @@
 
 #define TRACK_LENGTH 6945.554           // meters
 
-#define N_SAMPLES = 50
-#define DT = 0.2                        // seconds
+#define N_SAMPLES = 150
+#define DT = 0.02                       // seconds
 
 // sigma values for perturbing targets
 #define SIGMA_S = 10.0                  // s
