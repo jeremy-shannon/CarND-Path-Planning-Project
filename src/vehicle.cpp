@@ -1,4 +1,6 @@
 #include "vehicle.h"
+#include "constants.h"
+#include "costs.h"
 
 #include <iostream>
 #include <iostream>
@@ -19,44 +21,24 @@ Vehicle::Vehicle(double s, double s_d, double s_dd, double d, double d_d, double
     this->d_d  = d_d;           // d dot - velocity in d
     this->d_dd = d_dd;          // d dot-dot - acceleration in d
     state = "CS";
-    max_acceleration = -1;
 
 }
 
 Vehicle::~Vehicle() {}
 
 // TODO - Implement this method.
-void Vehicle::update_state(map<int, vector<vector<double>> > predictions) {
+void Vehicle::update_available_states() {
 	/*
-    Updates the "state" of the vehicle by assigning one of the
-    following values to 'self.state':
+    Updates the available "states" based on the current state:
 
     "KL" - Keep Lane
      - The vehicle will attempt to drive its target speed, unless there is 
        traffic in front of it, in which case it will slow down.
 
     "LCL" or "LCR" - Lane Change Left / Right
-     - The vehicle will IMMEDIATELY change lanes and then follow longitudinal
-       behavior for the "KL" state in the new lane.
+     - The vehicle will change lanes and then follow longitudinal
+       behavior for the "KL" state in the new lane. */
 
-    INPUTS
-    - predictions 
-    A dictionary. The keys are ids of other vehicles and the values are arrays
-    where each entry corresponds to the vehicle's predicted location at the 
-    corresponding timestep. The FIRST element in the array gives the vehicle's
-    current position. Example (showing a car with id 3 moving at 2 m/s):
-
-    {
-      3 : [
-        {"s" : 4, "d": 0},
-        {"s" : 6, "d": 0},
-        {"s" : 8, "d": 0},
-        {"s" : 10, "d": 0},
-      ]
-    }
-
-    */
-    //state = "KL"; // this is an example of how you change state.
     vector<string> states = {"KL"};
     if (this->d > 4) {
         states.push_back("LCL");
@@ -111,51 +93,14 @@ string Vehicle::display() {
 
 	ostringstream oss;
 	
-	oss << "s:    " << this->s << "\n";
-    oss << "d:    " << this->d << "\n";
-    oss << "v:    " << this->v << "\n";
-    oss << "a:    " << this->a << "\n";
+	oss << "s:    "    << this->s    << "\n";
+	oss << "s_d:    "  << this->s_d  << "\n";
+	oss << "s_dd:    " << this->s_dd << "\n";
+    oss << "d:    "    << this->d    << "\n";
+    oss << "d_d:    "  << this->d_d  << "\n";
+    oss << "d_dd:    " << this->d_dd << "\n";
     
     return oss.str();
-}
-
-vector<double> Vehicle::state_at(double t) {
-
-	/*
-    Predicts state of vehicle in t seconds (assuming constant acceleration)
-    */
-    int s = this->s + this->v * t + this->a * t * t / 2;
-    int v = this->v + this->a * t;
-    return {this->d, s, v, this->a};
-}
-
-bool Vehicle::collides_with(Vehicle other, double at_time) {
-
-	/*
-    Simple collision detection.
-    */
-    vector<double> check1 = state_at(at_time);
-    vector<double> check2 = other.state_at(at_time);
-    return (abs(check1[0]-check2[0]) <= L && (abs(check1[1]-check2[1]) <= L);
-}
-
-Vehicle::collider Vehicle::will_collide_with(Vehicle other, int timesteps) {
-
-	Vehicle::collider collider_temp;
-	collider_temp.collision = false;
-	collider_temp.time = -1; 
-
-	for (int t = 0; t < timesteps+1; t++)
-	{
-      	if( collides_with(other, t) )
-      	{
-			collider_temp.collision = true;
-			collider_temp.time = t; 
-        	return collider_temp;
-    	}
-	}
-
-	return collider_temp;
 }
 
 void Vehicle::realize_state(map<int,vector < vector<int> > > predictions) {
@@ -202,6 +147,8 @@ void Vehicle::realize_lane_change(map<int,vector< vector<double> > > predictions
 }
 
 vector<vector<double>> Vehicle::generate_predictions() {
+
+    // Generates a list of predicted s and d positions for dummy constant-speed vehicles
 
     vector<vector<double>> predictions;
     for( int i = 0; i < N_SAMPLES; i++)

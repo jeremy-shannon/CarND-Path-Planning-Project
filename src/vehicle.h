@@ -11,19 +11,12 @@
 #include <string>
 #include <iterator>
 #include "constants.h"
+#include "costs.h"
 
 using namespace std;
 
 class Vehicle {
 public:
-
-  struct collider{
-
-    bool collision ; // is there a collision?
-    double time; // time collision happens
-
-  };
-
 
   double s;
   double s_d;
@@ -32,6 +25,8 @@ public:
   double d_d;
   double d_dd;
   string state;
+  vector<string> available_states;
+  vector<vector<double>> // ????????? targets?
 
   /**
   * Constructor
@@ -43,21 +38,11 @@ Vehicle::Vehicle(double s, double s_d, double s_dd, double d, double d_d, double
   */
   virtual ~Vehicle();
 
-  void update_state(map<int, vector<vector<double>> > predictions);
+  void update_available_states();
 
   string display();
 
-  void increment(int dt);
-
-  vector<double> state_at(double t);
-
-  bool collides_with(Vehicle other, double at_time);
-
-  collider will_collide_with(Vehicle other, int timesteps);
-
   void realize_state(map<int, vector<vector<double>> > predictions);
-
-  void realize_constant_speed();
 
   void realize_keep_lane(map<int, vector<vector<double>> > predictions);
 
