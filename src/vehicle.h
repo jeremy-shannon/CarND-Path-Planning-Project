@@ -42,15 +42,17 @@ Vehicle::Vehicle(double s, double s_d, double s_dd, double d, double d_d, double
 
   void update_available_states();
 
-  string display();
+  vector<vector<double>> get_target_for_state(string state, map<int, vector<vector<double>>> predictions);
 
-  void realize_state(map<int, vector<vector<double>>> predictions);
+  vector<double> get_leading_vehicle_data_for_lane(int target_lane, map<int, vector<vector<double>>> predictions);
 
-  void realize_keep_lane(map<int, vector<vector<double>>> predictions);
+  vector<vector<double>> perturb(vector<vector<double>> target_s_and_d);
 
-  void realize_lane_change(map<int, vector<vector<double>>> predictions, string direction);
+  vector<vector<double>> generate_traj_for_target(vector<vector<double>> perturbed_target);
 
   vector<vector<double>> generate_predictions();
+
+  string display();
 
 };
 
