@@ -11,7 +11,6 @@
 #include "json.hpp"
 #include "smoother.h"
 #include "constants.h"
-#include "costs.h"
 #include "vehicle.h"
 
 using namespace std;

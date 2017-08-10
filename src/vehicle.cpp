@@ -4,10 +4,9 @@
 #include "jmt.h"
 
 #include <iostream>
-#include <iostream>
+#include <sstream>
+#include <fstream>
 #include <math.h>
-#include <map>
-#include <string>
 #include <iterator>
 #include <random>
 

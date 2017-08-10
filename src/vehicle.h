@@ -1,17 +1,9 @@
 #ifndef VEHICLE
 #define VEHICLE
 
-#include <iostream>
-#include <random>
-#include <sstream>
-#include <fstream>
-#include <math.h>
 #include <vector>
 #include <map>
 #include <string>
-#include <iterator>
-#include "constants.h"
-#include "costs.h"
 
 using namespace std;
 
