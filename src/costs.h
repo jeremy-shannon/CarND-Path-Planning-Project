@@ -20,7 +20,7 @@ double logistic(double x){
 
 double nearest_approach(vector<double> s_traj, vector<double> d_traj, vector<vector<double>> prediction) {
   double closest = 999999;
-  for (i = 0; i < N_SAMPLES; i++) {
+  for (int i = 0; i < N_SAMPLES; i++) {
     double current_dist = sqrt(pow(s_traj[i] - prediction[i][0], 2) + pow(d_traj[i] - prediction[i][1], 2));
     if (current_dist < closest) {
       closest = current_dist;
@@ -33,7 +33,7 @@ double nearest_approach_to_any_vehicle(vector<double> s_traj, vector<double> d_t
   // Determines the nearest the vehicle comes to any other vehicle throughout a trajectory
   double closest = 999999;
   for (auto prediction : predictions) {
-    double current_dist = nearest_approach(s_traj, d_traj, prediction->second);
+    double current_dist = nearest_approach(s_traj, d_traj, prediction.second);
     if (current_dist < closest) {
       closest = current_dist;
     }
@@ -46,7 +46,7 @@ vector<double> velocities_for_trajectory(vector<double> traj) {
   // also can be used to find accelerations from velocities, jerks from accelerations, etc.
   // (i.e. discrete derivatives)
   vector<double> velocities;
-  for (i = 1; i < traj.size(); i++) {
+  for (int i = 1; i < traj.size(); i++) {
     velocities.push_back((traj[i] - traj[i-1]) / DT);
   }
   return velocities;
@@ -68,12 +68,12 @@ double traj_diff_cost(vector<double> s_traj, vector<double> target_s) {
   s1 = s_traj[s_end - 1];
   s2 = s_traj[s_end - 2];
   s3 = s_traj[s_end - 3];
-  s_dot1 = (s1 - s2) / timestep;
-  s_dot2 = (s2 - s3) / timestep;
-  s_ddot = (s_dot1 - s_dot2) / timestep;
-  cost += fabs(s1 - target_s[0]) / sigma_s[0];
-  cost += fabs(s_dot1 - target_s[1]) / sigma_s[1];
-  cost += fabs(s_ddot - target_s[2]) / sigma_s[2];
+  s_dot1 = (s1 - s2) / DT;
+  s_dot2 = (s2 - s3) / DT;
+  s_ddot = (s_dot1 - s_dot2) / DT;
+  cost += fabs(s1 - target_s[0]) / SIGMA_S;
+  cost += fabs(s_dot1 - target_s[1]) / SIGMA_S_DOT;
+  cost += fabs(s_ddot - target_s[2]) / SIGMA_S_DDOT;
   return logistic(cost);
 }
 
@@ -162,7 +162,7 @@ double avg_jerk_cost(vector<double> s_traj) {
     total += s_dddot;
   }
   double avg_jerk = total / s_dddot_traj.size();
-  return logistic(avg_a / EXPECTED_ACC_IN_ONE_SEC );
+  return logistic(avg_jerk / EXPECTED_JERK_IN_ONE_SEC );
 }
 
 double calculate_total_cost(vector<double> s_traj, vector<double> d_traj, map<int,vector<vector<double>>> predictions, vector<double> target_s, vector<double> target_d, double target_time, double actual_time) {

@@ -10,6 +10,10 @@
 
 #define TRACK_LENGTH 6945.554           // meters
 
+// number of waypoints to use for interpolation
+#define NUM_WAYPOINTS_BEHIND 5
+#define NUM_WAYPOINTS_AHEAD 5
+
 #define N_SAMPLES 150
 #define DT 0.02                         // seconds
 

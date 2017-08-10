@@ -26,12 +26,11 @@ public:
   double d_dd;
   string state;
   vector<string> available_states;
-  vector<vector<double>> // ????????? targets?
 
   /**
   * Constructor
   */
-Vehicle::Vehicle(double s, double s_d, double s_dd, double d, double d_d, double d_dd);
+  Vehicle(double s, double s_d, double s_dd, double d, double d_d, double d_dd);
 
   /**
   * Destructor

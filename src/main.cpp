@@ -12,6 +12,7 @@
 #include "smoother.h"
 #include "constants.h"
 #include "costs.h"
+#include "vehicle.h"
 
 using namespace std;
 
@@ -211,11 +212,10 @@ int main() {
 					vector<double> next_y_vals;
 
 					//********************** CONSTRUCT INTERPOLATED WAYPOINTS OF NEARBY AREA **********************
-					int num_waypoints_behind = 2, num_wayopints_ahead = 3;
 					int num_waypoints = map_waypoints_x.size();
-					int next_waypoint_index = NextWaypoint(pos_x, pos_y, angle, map_waypoints_x, map_waypoints_y);
+					int next_waypoint_index = NextWaypoint(car_x, car_y, car_yaw, map_waypoints_x, map_waypoints_y);
 					vector<double> coarse_waypoints_s, coarse_waypoints_x, coarse_waypoints_y;
-					for (int i = -num_waypoints_behind; i < num_waypoints_ahead; i++) {
+					for (int i = -NUM_WAYPOINTS_BEHIND; i < NUM_WAYPOINTS_AHEAD; i++) {
 						// for smooting, take so many previous and so many subsequent waypoints
 						coarse_waypoints_s.push_back(map_waypoints_s[(next_waypoint_index+i) % num_waypoints]);
 						coarse_waypoints_x.push_back(map_waypoints_x[(next_waypoint_index+i) % num_waypoints]);
@@ -286,20 +286,20 @@ int main() {
 						double pos_d3 = frenet[1];
 						double s_d2 = (pos_s2 - pos_s3) / DT;
 						double d_d2 = (pos_d2 - pos_d3) / DT;
-						s_ddot = (s_d - s_d2) / DT;
-						d_ddot = (d_d - d_d2) / DT;
+						s_ddot = (s_dot - s_d2) / DT;
+						d_ddot = (d_dot - d_d2) / DT;
 					}		
 					
 					Vehicle my_car = Vehicle(pos_s, s_dot, s_ddot, pos_d, d_dot, d_ddot);
 
 					//********************** GENERATE PREDICTIONS FROM SENSOR FUSION DATA **************************
 					vector<Vehicle> other_cars;
-					map<int, vector<vector<double>> > predictions;
+					map<int, vector<vector<double>>> predictions;
 					for (auto sf: sensor_fusion) {
-						double other_car_vel = sqrt(pow(sf[3], 2) + pow(sf[4], 2));
+						double other_car_vel = sqrt(pow((double)sf[3], 2) + pow((double)sf[4], 2));
 						Vehicle other_car = Vehicle(sf[5], other_car_vel, 0, sf[5], 0, 0);
 						int v_id = sf[0];
-						vector<vector<int> > preds = other_car.generate_predictions(10);
+						vector<vector<double>> preds = other_car.generate_predictions();
 						predictions[v_id] = preds;
 					}
 

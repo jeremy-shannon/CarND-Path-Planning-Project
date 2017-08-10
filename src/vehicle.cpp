@@ -1,6 +1,7 @@
 #include "vehicle.h"
 #include "constants.h"
 #include "costs.h"
+#include "jmt.h"
 
 #include <iostream>
 #include <iostream>
@@ -39,7 +40,7 @@ vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vecto
 
         // Perturb trajectories, first by duration
         for (int i = -NUM_TIMESTEPS_TO_PERTURB; i <= NUM_TIMESTEPS_TO_PERTURB; i++) {
-            current_time = target_time + (i * DT);
+            double perturbed_time = target_time + (i * DT);
 
             // Perturb by sigma s and d values
             for (int i = 0; i < NUM_RANDOM_TRAJ_TO_GEN; i++) {
@@ -47,7 +48,7 @@ vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vecto
 
                 vector<vector<double>> possible_traj = generate_traj_for_target(perturbed_target);
 
-                double current_cost = calculate_total_cost(possible_traj[0], possible_traj[1], predictions, target_s_and_d[0], target_s_and_d[1], target_time, current_time)
+                double current_cost = calculate_total_cost(possible_traj[0], possible_traj[1], predictions, target_s_and_d[0], target_s_and_d[1], target_time, perturbed_time);
 
                 if (current_cost < best_cost) {
                     best_cost = current_cost;
@@ -78,7 +79,7 @@ void Vehicle::update_available_states() {
     }
 }
 
-vector<vector<double>> get_target_for_state(string state, map<int, vector<vector<double>>> predictions) {
+vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vector<vector<double>>> predictions) {
     // Returns two lists s_target and d_target in a single vector - s_target includes 
     // [s, s_dot, and s_ddot] and d_target includes the same
     // If no leading car found target lane, ego car will make up PERCENT_V_DIFF_TO_MAKE_UP of the difference
@@ -98,10 +99,10 @@ vector<vector<double>> get_target_for_state(string state, map<int, vector<vector
     // longitudinal acceleration : zero ?
     double target_s_dd = 0;
     // longitudinal acceleration : difference between current/target velocity over trajectory duration?
-    //double target_s_dd = (target_s_d - this->s_d) / (NUMBER_SAMPLE * DT);
+    //double target_s_dd = (target_s_d - this->s_d) / (N_SAMPLES * DT);
     // longitudinal displacement : current displacement plus difference in current/target velocity times 
     // trajectory duration
-    double target_s = this->s + (target_s_d + this->s_d) / 2 * (NUMBER_SAMPLE * DT)
+    double target_s = this->s + (target_s_d + this->s_d) / 2 * (N_SAMPLES * DT);
 
     vector<double> leading_vehicle_s_and_sdot;
 
@@ -132,18 +133,19 @@ vector<vector<double>> get_target_for_state(string state, map<int, vector<vector
         // target_s_dd = (target_s_d - this->s_d) / (NUMBER_SAMPLE * DT);
     }
 
-    return {{target_s, target_s_dot, target_s_ddot}, {target_d, target_d_dot, target_d_ddot}};
+    return {{target_s, target_s_d, target_s_dd}, {target_d, target_d_d, target_d_dd}};
 }
 
-vector<double> get_leading_vehicle_data_for_lane(int target_lane, map<int, vector<vector<double>>> predictions) {
+vector<double> Vehicle::get_leading_vehicle_data_for_lane(int target_lane, map<int, vector<vector<double>>> predictions) {
     // returns vehicle s and s_dot
     // this assumes the dummy vehicle will keep its lane and velocity, it will return the end position
     // and velocity (based on difference between last two positions)
     double leading_vehicle_speed = 0, leading_vehicle_distance = 99999;
     for (auto prediction : predictions) {
-        if (prediction->second[0][1] = target_lane) {
-            double predicted_end_s = prediction->second[prediction.size()-1];
-            double next_to_last_s = prediction->second[prediction.size()-2];
+        vector<vector<double>> pred_traj = prediction.second;
+        if (pred_traj[0][1] == target_lane) {
+            double predicted_end_s = pred_traj[pred_traj.size()-1][0];
+            double next_to_last_s = pred_traj[pred_traj.size()-2][0];
             double predicted_s_dot = (predicted_end_s - next_to_last_s) / DT;
             if (predicted_end_s < leading_vehicle_distance) {
                 leading_vehicle_distance = predicted_end_s;
@@ -154,7 +156,7 @@ vector<double> get_leading_vehicle_data_for_lane(int target_lane, map<int, vecto
     return {leading_vehicle_distance, leading_vehicle_speed};
 }
 
-vector<vector<double>> perturb(vector<vector<double>> target_s_and_d) {
+vector<vector<double>> Vehicle::perturb(vector<vector<double>> target_s_and_d) {
     // randomly perturb the target of the trajectory 
     double perturbed_s, perturbed_s_dot, perturbed_s_ddot,
            perturbed_d, perturbed_d_dot, perturbed_d_ddot;
@@ -170,37 +172,37 @@ vector<vector<double>> perturb(vector<vector<double>> target_s_and_d) {
 
     random_device rd;
     mt19937 e2(rd());
-    normal_distribution<> dist(target_s, SIGMA_S);
-    perturbed_s = dist(e2);
-    normal_distribution<> dist(target_s_dot, SIGMA_S_DOT);
-    perturbed_s_dot = dist(e2);
-    normal_distribution<> dist(target_s_ddot, SIGMA_S_DDOT);
-    perturbed_s_ddot = dist(e2);
-    normal_distribution<> dist(target_d, SIGMA_D);
-    perturbed_d = dist(e2);
-    normal_distribution<> dist(target_d_dot, SIGMA_D_DOT);
-    perturbed_d_dot = dist(e2);
-    normal_distribution<> dist(target_d_ddot, SIGMA_D_DDOT);
-    perturbed_d_ddot = dist(e2);
+    normal_distribution<> nd1(target_s, SIGMA_S);
+    perturbed_s = nd1(e2);
+    normal_distribution<> nd2(target_s_dot, SIGMA_S_DOT);
+    perturbed_s_dot = nd2(e2);
+    normal_distribution<> nd3(target_s_ddot, SIGMA_S_DDOT);
+    perturbed_s_ddot = nd3(e2);
+    normal_distribution<> nd4(target_d, SIGMA_D);
+    perturbed_d = nd4(e2);
+    normal_distribution<> nd5(target_d_dot, SIGMA_D_DOT);
+    perturbed_d_dot = nd5(e2);
+    normal_distribution<> nd6(target_d_ddot, SIGMA_D_DDOT);
+    perturbed_d_ddot = nd6(e2);
 
     return {{perturbed_s, perturbed_s_dot, perturbed_s_ddot},
             {perturbed_d, perturbed_d_dot, perturbed_d_ddot}};
 }
 
-vector<vector<double>> generate_traj_for_target(vector<vector<double>> target) {
+vector<vector<double>> Vehicle::generate_traj_for_target(vector<vector<double>> target) {
     // takes a target {{s, s_dot, s_ddot}, {d, d_dot, d_ddot}} and returns a Jerk-Minimized Trajectory
     // (JMT) connecting current state (s and d) to target state in a list of s points and a list of d points
     // ex. {{s1, s2, ... , sn}, {d1, d2, ... , dn}}
     vector<double> target_s = target[0];
     vector<double> target_d = target[1];
-    vector<double> current_s = {this->s, this->s_dot, this->s_ddot};
-    vector<double> current_d = {this->d, this->d_dot, this->d_ddot};
+    vector<double> current_s = {this->s, this->s_d, this->s_dd};
+    vector<double> current_d = {this->d, this->d_d, this->d_dd};
 
     double duration = N_SAMPLES * DT;
 
     // determine coefficients of optimal JMT 
-    vector<double> s_traj_coeffs = get_traj_coeffs(vector<double> current_s, vector<double> target_s, double duration)
-    vector<double> d_traj_coeffs = get_traj_coeffs(vector<double> current_d, vector<double> target_d, double duration)
+    vector<double> s_traj_coeffs = get_traj_coeffs(current_s, target_s, duration);
+    vector<double> d_traj_coeffs = get_traj_coeffs(current_d, target_d, duration);
 
     vector<double> s_traj;
     vector<double> d_traj;
@@ -227,7 +229,7 @@ vector<vector<double>> Vehicle::generate_predictions() {
     vector<vector<double>> predictions;
     for( int i = 0; i < N_SAMPLES; i++)
     {
-        double new_s = this->s + this->s_dot * i * DT;
+        double new_s = this->s + this->s_d * i * DT;
         vector<double> s_and_d = {new_s, this->d};
         predictions.push_back(s_and_d);
     }
