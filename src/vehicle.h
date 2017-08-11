@@ -39,7 +39,7 @@ public:
 
   vector<vector<double>> perturb(vector<vector<double>> target_s_and_d);
 
-  vector<vector<double>> generate_traj_for_target(vector<vector<double>> perturbed_target);
+  vector<vector<double>> generate_traj_for_target(vector<vector<double>> perturbed_target, double duration);
 
   vector<vector<double>> generate_predictions();
 

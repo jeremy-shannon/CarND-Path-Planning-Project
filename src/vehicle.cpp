@@ -28,14 +28,33 @@ Vehicle::Vehicle(double s, double s_d, double s_dd, double d, double d_d, double
 Vehicle::~Vehicle() {}
 
 vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vector<double>>> predictions) {
+    
     update_available_states();
+
+    // DEBUG
+    cout << "available states: "; 
+    for (auto st: available_states) cout << st << " ";
+    cout << endl << endl; 
+
     vector<vector<double>> best_frenet_traj;
     double best_cost = 999999;
+    string best_traj_state = "";
     for (string state : available_states) {
 
         // target state (s and d) and time
         vector<vector<double>> target_s_and_d = get_target_for_state(state, predictions);
         double target_time = N_SAMPLES * DT;
+
+        // DEBUG
+        cout << "target s&d for state " << state << ": ";
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 3; j++) {
+                cout << target_s_and_d[i][j];
+                if (j != 2) cout << ",";
+            }
+            cout << "; ";
+        }
+        cout << endl << endl;
 
         // Perturb trajectories, first by duration
         for (int i = -NUM_TIMESTEPS_TO_PERTURB; i <= NUM_TIMESTEPS_TO_PERTURB; i++) {
@@ -45,18 +64,44 @@ vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vecto
             for (int i = 0; i < NUM_RANDOM_TRAJ_TO_GEN; i++) {
                 vector<vector<double>> perturbed_target = perturb(target_s_and_d);
 
-                vector<vector<double>> possible_traj = generate_traj_for_target(perturbed_target);
+                //  // DEBUG
+                // cout << "perturbed target s&d for time " << perturbed_time << ": ";
+                // for (int i = 0; i < 2; i++) {
+                //     for (int j = 0; j < 3; j++) {
+                //         cout << perturbed_target[i][j];
+                //         if (j != 2) cout << ",";
+                //     }
+                //     cout << "; ";
+                // }
+                // cout << endl << endl;
+
+                vector<vector<double>> possible_traj = generate_traj_for_target(perturbed_target, perturbed_time);
+
+                // // DEBUG
+                // cout << "possible_traj: ";
+                // for (int i = 0; i < 5; i++) {
+                //     cout << "(" << possible_traj[0][i] <<  "," << possible_traj[1][i] << ") ";
+                // }
+                // cout << endl << endl;
 
                 double current_cost = calculate_total_cost(possible_traj[0], possible_traj[1], predictions, target_s_and_d[0], target_s_and_d[1], target_time, perturbed_time);
 
                 if (current_cost < best_cost) {
                     best_cost = current_cost;
                     best_frenet_traj = possible_traj;
+                    best_traj_state = state;
                 }
             }
         }
-        
     }
+    // DEBUG
+    cout << "chosen state: " << best_traj_state << ", cost: " << best_cost << endl << endl;
+    cout << "best frenet trajectory (5 spaced out; s,d):" << endl;
+    for (int i = 0; i <= N_SAMPLES; i += N_SAMPLES/5-1) {
+        cout << i << ":(" << best_frenet_traj[0][i] << "," << best_frenet_traj[1][i] << ") ";
+    }
+    cout << endl << endl;
+
     return best_frenet_traj;
 }
 
@@ -129,7 +174,7 @@ vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vect
         target_s = leading_vehicle_s_and_sdot[0] - FOLLOW_DISTANCE;
         target_s_d = leading_vehicle_s_and_sdot[1];
         // target acceleration = difference between start/end velocities over time duration? or just zero?
-        // target_s_dd = (target_s_d - this->s_d) / (NUMBER_SAMPLE * DT);
+        //target_s_dd = (target_s_d - this->s_d) / (N_SAMPLES * DT);
     }
 
     return {{target_s, target_s_d, target_s_dd}, {target_d, target_d_d, target_d_dd}};
@@ -188,7 +233,7 @@ vector<vector<double>> Vehicle::perturb(vector<vector<double>> target_s_and_d) {
             {perturbed_d, perturbed_d_dot, perturbed_d_ddot}};
 }
 
-vector<vector<double>> Vehicle::generate_traj_for_target(vector<vector<double>> target) {
+vector<vector<double>> Vehicle::generate_traj_for_target(vector<vector<double>> target, double duration) {
     // takes a target {{s, s_dot, s_ddot}, {d, d_dot, d_ddot}} and returns a Jerk-Minimized Trajectory
     // (JMT) connecting current state (s and d) to target state in a list of s points and a list of d points
     // ex. {{s1, s2, ... , sn}, {d1, d2, ... , dn}}
@@ -197,11 +242,17 @@ vector<vector<double>> Vehicle::generate_traj_for_target(vector<vector<double>> 
     vector<double> current_s = {this->s, this->s_d, this->s_dd};
     vector<double> current_d = {this->d, this->d_d, this->d_dd};
 
-    double duration = N_SAMPLES * DT;
-
     // determine coefficients of optimal JMT 
     vector<double> s_traj_coeffs = get_traj_coeffs(current_s, target_s, duration);
     vector<double> d_traj_coeffs = get_traj_coeffs(current_d, target_d, duration);
+
+    // // DEBUG
+    // cout << "s coeffs: ";
+    // for (auto s : s_traj_coeffs) cout << s << ",";
+    // cout << endl;
+    // cout << "d coeffs: ";
+    // for (auto d : d_traj_coeffs) cout << d << ",";
+    // cout << endl << endl;
 
     vector<double> s_traj;
     vector<double> d_traj;
@@ -210,9 +261,9 @@ vector<vector<double>> Vehicle::generate_traj_for_target(vector<vector<double>> 
     for (int i = 0; i < N_SAMPLES; i++) {
         double t = i * DT;
         double s_val = 0, d_val = 0;
-        for (int j = 0; j < s_traj_coeffs.size(); i++) {
-            s_val += s_traj_coeffs[j] * pow(t, i);
-            d_val += d_traj_coeffs[j] * pow(t, i);
+        for (int j = 0; j < s_traj_coeffs.size(); j++) {
+            s_val += s_traj_coeffs[j] * pow(t, j);
+            d_val += d_traj_coeffs[j] * pow(t, j);
         }
         s_traj.push_back(s_val);
         d_traj.push_back(d_val);

@@ -210,6 +210,9 @@ int main() {
 					vector<double> next_x_vals;
 					vector<double> next_y_vals;
 
+					// DEBUG
+					cout << endl << "**************** ITERATION BEGIN ****************" << endl << endl;
+
 					//********************** CONSTRUCT INTERPOLATED WAYPOINTS OF NEARBY AREA **********************
 					int num_waypoints = map_waypoints_x.size();
 					int next_waypoint_index = NextWaypoint(car_x, car_y, car_yaw, map_waypoints_x, map_waypoints_y);
@@ -238,6 +241,29 @@ int main() {
 					interpolated_waypoints_x = interpolate_points(coarse_waypoints_s, coarse_waypoints_x, dist_inc, num_interpolation_points);
 					interpolated_waypoints_y = interpolate_points(coarse_waypoints_s, coarse_waypoints_y, dist_inc, num_interpolation_points);
 
+					// DEBUG
+					cout << "coarse s: ";
+					for (auto s: coarse_waypoints_s) cout << s << ", ";
+					cout << endl << "interp s: ";
+					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/5-1) {
+						cout << "(" << i << ")" << interpolated_waypoints_s[i] << " ";
+					}
+					cout << endl;
+					cout << "coarse x: ";
+					for (auto x: coarse_waypoints_x) cout << x << ", ";
+					cout << endl << "interp x: ";
+					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/5-1) {
+						cout << "(" << i << ")" << interpolated_waypoints_x[i] << " ";
+					}
+					cout << endl;
+					cout << "coarse y: ";
+					for (auto y: coarse_waypoints_y) cout << y << ", ";
+					cout << endl << "interp y: ";
+					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/5-1) { 
+						cout << "(" << i << ")" << interpolated_waypoints_y[i] << " ";
+					}
+					cout << endl << endl;
+
 					//***************** DETERMINE EGO CAR PARAMETERS AND CONSTRUCT VEHICLE OBJECT ******************
 					// Vehicle class requires s,s_d,s_dd,d,d_d,d_dd - in that order
 					double pos_s, s_dot, s_ddot;
@@ -245,10 +271,10 @@ int main() {
 					// Other values necessary for determining these based on future points in previous path
 					double pos_x, pos_y, angle;
 
-					int path_size = min(PREVIOUS_PATH_POINTS_TO_KEEP, (int)previous_path_x.size());
+					int subpath_size = min(PREVIOUS_PATH_POINTS_TO_KEEP, (int)previous_path_x.size());
 
 					// use default values if not enough previous path points
-					if (path_size < 4) {
+					if (subpath_size < 4) {
 						pos_x = car_x;
 						pos_y = car_y;
 						angle = deg2rad(car_yaw);
@@ -260,16 +286,17 @@ int main() {
 						d_ddot = 0;
 					} else {
 						// consider current position to be end of previous path
-						pos_x = previous_path_x[path_size-1];
-						pos_y = previous_path_y[path_size-1];
-						double pos_x2 = previous_path_x[path_size-2];
-						double pos_y2 = previous_path_y[path_size-2];
+						pos_x = previous_path_x[subpath_size-1];
+						pos_y = previous_path_y[subpath_size-1];
+						double pos_x2 = previous_path_x[subpath_size-2];
+						double pos_y2 = previous_path_y[subpath_size-2];
 						angle = atan2(pos_y-pos_y2,pos_x-pos_x2);vector<double> frenet = getFrenet(pos_x, pos_y, angle, interpolated_waypoints_x, interpolated_waypoints_y);
 						pos_s = frenet[0];
 						pos_d = frenet[1];
 
-						double pos_x3 = previous_path_x[path_size-3];
-						double pos_y3 = previous_path_y[path_size-3];
+						// have to get another point to calculate s_dot
+						double pos_x3 = previous_path_x[subpath_size-3];
+						double pos_y3 = previous_path_y[subpath_size-3];
 						double angle2 = atan2(pos_y2-pos_y3,pos_x2-pos_x3);
 						frenet = getFrenet(pos_x2, pos_y2, angle2, interpolated_waypoints_x, interpolated_waypoints_y);
 						double pos_s2 = frenet[0];
@@ -277,8 +304,9 @@ int main() {
 						s_dot = (pos_s - pos_s2) / DT;
 						d_dot = (pos_d - pos_d2) / DT;
 						
-						double pos_x4 = previous_path_x[path_size-4];
-						double pos_y4 = previous_path_y[path_size-4];
+						// and yet another point to calculate s_ddot
+						double pos_x4 = previous_path_x[subpath_size-4];
+						double pos_y4 = previous_path_y[subpath_size-4];
 						double angle3 = atan2(pos_y3-pos_y4,pos_x3-pos_x4);
 						frenet = getFrenet(pos_x3, pos_y3, angle3, interpolated_waypoints_x, interpolated_waypoints_y);
 						double pos_s3 = frenet[0];
@@ -291,16 +319,44 @@ int main() {
 					
 					Vehicle my_car = Vehicle(pos_s, s_dot, s_ddot, pos_d, d_dot, d_ddot);
 
+
+					// DEBUG
+					cout << "ego state (x,y,s,d,yaw,speed): " << endl << car_x << "," << car_y << ",";
+					cout  << car_s << "," << car_d << "," << car_yaw << "," << car_speed << endl;
+					cout << "planning state (s,s_d,s_dd),(d,d_d,d_dd): (" << pos_s << "," << s_dot << "," << s_ddot;
+					cout << "),(" << pos_d << "," << d_dot << "," << d_ddot << ")" << endl << endl;
+
 					//********************** GENERATE PREDICTIONS FROM SENSOR FUSION DATA **************************
+					// The data format for each car is: [ id, x, y, vx, vy, s, d]. The id is a unique identifier for that car. The x, y values are in global map coordinates, and the vx, vy values are the velocity components, also in reference to the global map. Finally s and d are the Frenet coordinates for that car.
 					vector<Vehicle> other_cars;
 					map<int, vector<vector<double>>> predictions;
 					for (auto sf: sensor_fusion) {
 						double other_car_vel = sqrt(pow((double)sf[3], 2) + pow((double)sf[4], 2));
-						Vehicle other_car = Vehicle(sf[5], other_car_vel, 0, sf[5], 0, 0);
+						Vehicle other_car = Vehicle(sf[5], other_car_vel, 0, sf[6], 0, 0);
 						int v_id = sf[0];
 						vector<vector<double>> preds = other_car.generate_predictions();
 						predictions[v_id] = preds;
 					}
+
+					// DEBUG
+					cout << "sensor fusion: (id, x, y, vx, vy, s, d)" << endl;
+					for (auto sf: sensor_fusion) {
+						cout << sf[0] << ": " << sf[1] << "," << sf[2] << "," << sf[3] << "," << sf[4] << "," << sf[5] << "," << sf[6] << endl;
+					}
+					cout << "sensor fusion: (id, dist)" << endl;
+					for (auto sf: sensor_fusion) cout << sf[0] << ":" << distance(pos_x, pos_y, sf[1], sf[2]) << ", ";
+					cout << endl << endl;
+					cout << endl;
+					cout << "predictions: (id, (s1,d1) (s2,d2) ... (sn,dn) - spaced out)" << endl;
+					for (auto pred : predictions) {
+						cout << pred.first << " ";
+						auto sd = pred.second;
+    				for (int i = 0; i <= N_SAMPLES; i += N_SAMPLES/5-1) {
+							cout << "(" << sd[i][0] << "," << sd[i][1] << ") ";
+						}
+						cout << endl;
+					}
+					cout << endl;
 
 					// ******************************* DETERMINE BEST TRAJECTORY ***********************************
 					// where the magic happens?
@@ -308,29 +364,42 @@ int main() {
 					vector<vector<double>> frenet_traj = my_car.get_best_frenet_trajectory(predictions);
 					vector<vector<double>> best_xy_traj;
 
-					// *************************** CONVERT AND PRODUCE NEW TRAJECTORY *****************************
-					// convert NEW_PATH_POINTS_TO_ADD points from frenet trajectory to xy
-					for (int i = 0; i < NEW_PATH_POINTS_TO_ADD; i++) {
+					// // DEBUG
+					// cout << "first 5 frenet traj pts: ";
+					// for (int i = 0; i < 5; i++) {
+					// 	cout << "(" << frenet_traj[0][i] << "," << frenet_traj[1][i] << ") ";
+					// }
+					// cout << endl << endl;
+
+					// *************************** CONVERT AND PRODUCE NEW PATH *****************************
+					// convert points from frenet trajectory to xy
+					for (int i = 0; i < N_SAMPLES; i++) {
 						best_xy_traj.push_back(getXY(frenet_traj[0][i], frenet_traj[1][i], interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y));
 					}
 					// add previous path, if any, to next path
-					for(int i = 0; i < path_size; i++) {
+					for(int i = 0; i < subpath_size; i++) {
 						next_x_vals.push_back(previous_path_x[i]);
 						next_y_vals.push_back(previous_path_y[i]);
 					}
 					// add xy points from newly generated path
-					for (vector<double> xy : best_xy_traj) {
-						next_x_vals.push_back(xy[0]);
-						next_y_vals.push_back(xy[1]);
+					for (int i = 0; i < (NUM_PATH_POINTS - subpath_size); i++) {
+						next_x_vals.push_back(best_xy_traj[i][0]);
+						next_y_vals.push_back(best_xy_traj[i][1]);
 					}
 
+					// DEBUG
+					cout << "xy trajectory (5 spaced-out points, x,y):" << endl;
+					for (int i = 0; i <= NUM_PATH_POINTS; i += NUM_PATH_POINTS/5-1) {
+						cout << "(" << best_xy_traj[i][0] << "," << best_xy_traj[i][1] << ") ";
+					}
+					cout << endl << endl;
 					/********************* simple, drive straight example *********************
 					for(int i = 0; i < 50; i++) {
 						next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
 						next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
 					}***************************************************************************/
 					/************************ drive in circles example ************************
-					for(int i = 0; i < 50-path_size; i++) {    
+					for(int i = 0; i < 50-subpath_size; i++) {    
 						next_x_vals.push_back(pos_x+(dist_inc)*cos(angle+(i+1)*(pi()/100)));
 						next_y_vals.push_back(pos_y+(dist_inc)*sin(angle+(i+1)*(pi()/100)));
 						pos_x += (dist_inc)*cos(angle+(i+1)*(pi()/100));
@@ -339,18 +408,15 @@ int main() {
 					/***************** drive along interpolated waypoints example ****************
 					// get next waypoint from current car position
 					int next_waypoint_index_interpolated = NextWaypoint(pos_x, pos_y, angle, 																	interpolated_waypoints_x, interpolated_waypoints_y);
-					for (int i = 0; i < 50 - path_size; i ++) {
+					for (int i = 0; i < 50 - subpath_size; i ++) {
 						next_x_vals.push_back(interpolated_waypoints_x[next_waypoint_index_interpolated+i]);
 						next_y_vals.push_back(interpolated_waypoints_y[next_waypoint_index_interpolated+i]);
 					}******************************************************************************/
 
-					cout << "next x: " << endl;
-					for (auto x: next_x_vals) cout << x << ", ";
-					cout << endl;
-
-					cout << "sensor fusion: " << endl;
-					for (auto sf: sensor_fusion) cout << "id: " << sf[0] << ", dist: " << distance(pos_x, pos_y, sf[1], sf[2]) << endl;
-					cout << endl;
+					// DEBUG
+					cout << "next 5 x: ";
+					for (int i = 0; i < 5; i++) cout << next_x_vals[i] << ", ";
+					cout << endl << endl;
 
 					msgJson["next_x"] = next_x_vals;
 					msgJson["next_y"] = next_y_vals;

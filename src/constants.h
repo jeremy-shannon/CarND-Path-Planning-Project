@@ -6,7 +6,7 @@
 #define PERCENT_V_DIFF_TO_MAKE_UP 0.5   // the percent difference between current velocity and target velocity to allow ego car to make up in a single trajectory      
 
 #define PREVIOUS_PATH_POINTS_TO_KEEP 10
-#define NEW_PATH_POINTS_TO_ADD 40
+#define NUM_PATH_POINTS 150
 
 #define TRACK_LENGTH 6945.554           // meters
 
@@ -21,7 +21,7 @@
 #define NUM_TIMESTEPS_TO_PERTURB 5      // the number of timesteps, +/- target time, to perturb trajectories
 
 // sigma values for perturbing targets
-#define SIGMA_S 10.0                    // s
+#define SIGMA_S 5.0                    // s
 #define SIGMA_S_DOT 4.0                 // s_dot
 #define SIGMA_S_DDOT 2.0                // s
 #define SIGMA_D 1.0                     // d
