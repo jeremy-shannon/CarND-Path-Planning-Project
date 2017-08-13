@@ -221,17 +221,21 @@ int main() {
 						// for smooting, take so many previous and so many subsequent waypoints
 						int idx = (next_waypoint_index+i) % num_waypoints;
 						if (idx < 0) {
+							// correct for wrap
 							idx += num_waypoints;
 						}
-						coarse_waypoints_s.push_back(map_waypoints_s[idx]);
+						// correct for wrap in s for spline interpolation (must be continuous)
+						double current_s = map_waypoints_s[idx];
+						double base_s = map_waypoints_s[next_waypoint_index];
+						if (i < 0 && current_s > base_s) {
+							current_s -= TRACK_LENGTH;
+						}
+						if (i > 0 && current_s < base_s) {
+							current_s += TRACK_LENGTH;
+						}
+						coarse_waypoints_s.push_back(current_s);
 						coarse_waypoints_x.push_back(map_waypoints_x[idx]);
 						coarse_waypoints_y.push_back(map_waypoints_y[idx]);
-					}
-					// correct for wrap in s values
-					for (int i = 1; i < coarse_waypoints_s.size(); i++) {
-						if (coarse_waypoints_s[i] < coarse_waypoints_s[i-1]) {
-							coarse_waypoints_s[i] += TRACK_LENGTH;
-						}
 					}
 
 					// DEBUG
@@ -302,8 +306,8 @@ int main() {
 						double pos_x2 = previous_path_x[subpath_size-2];
 						double pos_y2 = previous_path_y[subpath_size-2];
 						angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
-						//vector<double> frenet = getFrenet(pos_x, pos_y, angle, interpolated_waypoints_x, interpolated_waypoints_y);
-						vector<double> frenet = getFrenet(pos_x, pos_y, angle, map_waypoints_x, map_waypoints_y);
+						vector<double> frenet = getFrenet(pos_x, pos_y, angle, interpolated_waypoints_x, interpolated_waypoints_y);
+						//vector<double> frenet = getFrenet(pos_x, pos_y, angle, map_waypoints_x, map_waypoints_y);
 						pos_s = frenet[0];
 						pos_d = frenet[1];
 
@@ -311,8 +315,8 @@ int main() {
 						double pos_x3 = previous_path_x[subpath_size-3];
 						double pos_y3 = previous_path_y[subpath_size-3];
 						double angle2 = atan2(pos_y2-pos_y3,pos_x2-pos_x3);
-						//frenet = getFrenet(pos_x2, pos_y2, angle2, interpolated_waypoints_x, interpolated_waypoints_y);
-						frenet = getFrenet(pos_x2, pos_y2, angle2, map_waypoints_x, map_waypoints_y);
+						frenet = getFrenet(pos_x2, pos_y2, angle2, interpolated_waypoints_x, interpolated_waypoints_y);
+						//frenet = getFrenet(pos_x2, pos_y2, angle2, map_waypoints_x, map_waypoints_y);
 						double pos_s2 = frenet[0];
 						double pos_d2 = frenet[1];
 						s_dot = (pos_s - pos_s2) / PATH_DT;
@@ -322,8 +326,8 @@ int main() {
 						double pos_x4 = previous_path_x[subpath_size-4];
 						double pos_y4 = previous_path_y[subpath_size-4];
 						double angle3 = atan2(pos_y3-pos_y4,pos_x3-pos_x4);
-						//frenet = getFrenet(pos_x3, pos_y3, angle3, interpolated_waypoints_x, interpolated_waypoints_y);
-						frenet = getFrenet(pos_x3, pos_y3, angle3, map_waypoints_x, map_waypoints_y);
+						frenet = getFrenet(pos_x3, pos_y3, angle3, interpolated_waypoints_x, interpolated_waypoints_y);
+						//frenet = getFrenet(pos_x3, pos_y3, angle3, map_waypoints_x, map_waypoints_y);
 						double pos_s3 = frenet[0];
 						double pos_d3 = frenet[1];
 						double s_d2 = (pos_s2 - pos_s3) / PATH_DT;
@@ -387,8 +391,8 @@ int main() {
 					// ********************* CONVERT, UPSAMPLE, AND PRODUCE NEW PATH ***********************
 					// convert points from frenet trajectory to xy
 					for (int i = 0; i < N_SAMPLES; i++) {
-						//traj_xy_point = getXY(frenet_traj[0][i], frenet_traj[1][i], interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y);
-						traj_xy_point = getXY(frenet_traj[0][i], frenet_traj[1][i], map_waypoints_s, map_waypoints_x, map_waypoints_y);
+						traj_xy_point = getXY(frenet_traj[0][i], frenet_traj[1][i], interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y);
+						//traj_xy_point = getXY(frenet_traj[0][i], frenet_traj[1][i], map_waypoints_s, map_waypoints_x, map_waypoints_y);
 						best_x_traj.push_back(traj_xy_point[0]);
 						best_y_traj.push_back(traj_xy_point[1]);
 					}
