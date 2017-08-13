@@ -7,7 +7,7 @@
 
 #define PREVIOUS_PATH_POINTS_TO_KEEP 25
 #define NUM_PATH_POINTS 50
-#define PATH_DT 0.05                    // seconds
+#define PATH_DT 0.02                    // seconds
 
 #define TRACK_LENGTH 6945.554           // meters
 
