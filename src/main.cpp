@@ -313,8 +313,8 @@ int main() {
 						frenet = getFrenet(pos_x2, pos_y2, angle2, interpolated_waypoints_x, interpolated_waypoints_y);
 						double pos_s2 = frenet[0];
 						double pos_d2 = frenet[1];
-						s_dot = (pos_s - pos_s2) / DT;
-						d_dot = (pos_d - pos_d2) / DT;
+						s_dot = (pos_s - pos_s2) / PATH_DT;
+						d_dot = (pos_d - pos_d2) / PATH_DT;
 						
 						// and yet another point to calculate s_ddot
 						double pos_x4 = previous_path_x[subpath_size-4];
@@ -323,10 +323,10 @@ int main() {
 						frenet = getFrenet(pos_x3, pos_y3, angle3, interpolated_waypoints_x, interpolated_waypoints_y);
 						double pos_s3 = frenet[0];
 						double pos_d3 = frenet[1];
-						double s_d2 = (pos_s2 - pos_s3) / DT;
-						double d_d2 = (pos_d2 - pos_d3) / DT;
-						s_ddot = (s_dot - s_d2) / DT;
-						d_ddot = (d_dot - d_d2) / DT;
+						double s_d2 = (pos_s2 - pos_s3) / PATH_DT;
+						double d_d2 = (pos_d2 - pos_d3) / PATH_DT;
+						s_ddot = (s_dot - s_d2) / PATH_DT;
+						d_ddot = (d_dot - d_d2) / PATH_DT;
 					}		
 					
 					Vehicle my_car = Vehicle(pos_s, s_dot, s_ddot, pos_d, d_dot, d_ddot);
@@ -410,7 +410,7 @@ int main() {
 					} 
 
 					// DEBUG
-					cout << "****TRAJECTORY DATA****"
+					cout << "****TRAJECTORY DATA****" << endl;
 					cout << "xy trajectory (spaced-out; i: x,y):" << endl;
 					for (int i = 0; i < N_SAMPLES; i += N_SAMPLES/3-1) {
 						cout << "(" << i << ": " << best_x_traj[i] << "," << best_y_traj[i] << ") ";
