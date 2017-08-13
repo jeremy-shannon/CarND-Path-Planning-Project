@@ -213,15 +213,19 @@ int main() {
 					// DEBUG
 					cout << endl << "**************** ITERATION BEGIN ****************" << endl << endl;
 
-					//********************** CONSTRUCT INTERPOLATED WAYPOINTS OF NEARBY AREA **********************
+					// ********************* CONSTRUCT INTERPOLATED WAYPOINTS OF NEARBY AREA **********************
 					int num_waypoints = map_waypoints_x.size();
 					int next_waypoint_index = NextWaypoint(car_x, car_y, car_yaw, map_waypoints_x, map_waypoints_y);
 					vector<double> coarse_waypoints_s, coarse_waypoints_x, coarse_waypoints_y;
 					for (int i = -NUM_WAYPOINTS_BEHIND; i < NUM_WAYPOINTS_AHEAD; i++) {
 						// for smooting, take so many previous and so many subsequent waypoints
-						coarse_waypoints_s.push_back(map_waypoints_s[(next_waypoint_index+i) % num_waypoints]);
-						coarse_waypoints_x.push_back(map_waypoints_x[(next_waypoint_index+i) % num_waypoints]);
-						coarse_waypoints_y.push_back(map_waypoints_y[(next_waypoint_index+i) % num_waypoints]);
+						int idx = (next_waypoint_index+i) % num_waypoints;
+						if (idx < 0) {
+							idx += num_waypoints;
+						}
+						coarse_waypoints_s.push_back(map_waypoints_s[idx]);
+						coarse_waypoints_x.push_back(map_waypoints_x[idx]);
+						coarse_waypoints_y.push_back(map_waypoints_y[idx]);
 					}
 					// correct for wrap in s values
 					for (int i = 1; i < coarse_waypoints_s.size(); i++) {
@@ -229,9 +233,22 @@ int main() {
 							coarse_waypoints_s[i] += TRACK_LENGTH;
 						}
 					}
+
+					// DEBUG
+					cout << "****WAYPOINT INTERPOLATION****" << endl;
+					cout << "coarse s: ";
+					for (auto s: coarse_waypoints_s) cout << s << ", ";
+					cout << endl;
+					cout << "coarse x: ";
+					for (auto x: coarse_waypoints_x) cout << x << ", ";
+					cout << endl;
+					cout << "coarse y: ";
+					for (auto y: coarse_waypoints_y) cout << y << ", ";
+					cout << endl;
+
 					// interpolation parameters, 240 points at 0.5 distance increment = 120 m = 4 30-m sections
-					double dist_inc = 0.5;	
-					int num_interpolation_points = 240;
+					double dist_inc = 1.0;	
+					int num_interpolation_points = 275;
 					vector<double> interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y;
 					// interpolated s is simply...
 					interpolated_waypoints_s.push_back(coarse_waypoints_s[0]);
@@ -242,29 +259,23 @@ int main() {
 					interpolated_waypoints_y = interpolate_points(coarse_waypoints_s, coarse_waypoints_y, dist_inc, num_interpolation_points);
 
 					// DEBUG
-					cout << "coarse s: ";
-					for (auto s: coarse_waypoints_s) cout << s << ", ";
-					cout << endl << "interp s: ";
-					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/5-1) {
+					cout << "interp s: ";
+					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) {
 						cout << "(" << i << ")" << interpolated_waypoints_s[i] << " ";
 					}
 					cout << endl;
-					cout << "coarse x: ";
-					for (auto x: coarse_waypoints_x) cout << x << ", ";
-					cout << endl << "interp x: ";
-					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/5-1) {
+					cout << "interp x: ";
+					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) {
 						cout << "(" << i << ")" << interpolated_waypoints_x[i] << " ";
 					}
 					cout << endl;
-					cout << "coarse y: ";
-					for (auto y: coarse_waypoints_y) cout << y << ", ";
-					cout << endl << "interp y: ";
-					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/5-1) { 
+					cout << "interp y: ";
+					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) { 
 						cout << "(" << i << ")" << interpolated_waypoints_y[i] << " ";
 					}
 					cout << endl << endl;
 
-					//***************** DETERMINE EGO CAR PARAMETERS AND CONSTRUCT VEHICLE OBJECT ******************
+					// **************** DETERMINE EGO CAR PARAMETERS AND CONSTRUCT VEHICLE OBJECT ******************
 					// Vehicle class requires s,s_d,s_dd,d,d_d,d_dd - in that order
 					double pos_s, s_dot, s_ddot;
 					double pos_d, d_dot, d_ddot;
@@ -285,12 +296,13 @@ int main() {
 						s_ddot = 0;
 						d_ddot = 0;
 					} else {
-						// consider current position to be end of previous path
+						// consider current position to be last point of previous path to be kept
 						pos_x = previous_path_x[subpath_size-1];
 						pos_y = previous_path_y[subpath_size-1];
 						double pos_x2 = previous_path_x[subpath_size-2];
 						double pos_y2 = previous_path_y[subpath_size-2];
-						angle = atan2(pos_y-pos_y2,pos_x-pos_x2);vector<double> frenet = getFrenet(pos_x, pos_y, angle, interpolated_waypoints_x, interpolated_waypoints_y);
+						angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
+						vector<double> frenet = getFrenet(pos_x, pos_y, angle, interpolated_waypoints_x, interpolated_waypoints_y);
 						pos_s = frenet[0];
 						pos_d = frenet[1];
 
@@ -319,14 +331,14 @@ int main() {
 					
 					Vehicle my_car = Vehicle(pos_s, s_dot, s_ddot, pos_d, d_dot, d_ddot);
 
-
 					// DEBUG
-					cout << "ego state (x,y,s,d,yaw,speed): " << endl << car_x << "," << car_y << ",";
-					cout  << car_s << "," << car_d << "," << car_yaw << "," << car_speed << endl;
-					cout << "planning state (s,s_d,s_dd),(d,d_d,d_dd): (" << pos_s << "," << s_dot << "," << s_ddot;
-					cout << "),(" << pos_d << "," << d_dot << "," << d_ddot << ")" << endl << endl;
+					cout << "****EGO CAR DATA****" << endl;
+					cout << "ego state (x,y,s,d,yaw,speed): " << car_x << ", " << car_y << ", " << car_s << ", " << car_d << ", " << car_yaw << ", " << car_speed << endl;
+					cout << "planning state (x,y,yaw): " << pos_x << ", " << pos_y << ", " << angle << endl;
+					cout << "planning state (s,s_d,s_dd),(d,d_d,d_dd): (" << pos_s << ", " << s_dot << ", " << s_ddot;
+					cout << ") (" << pos_d << ", " << d_dot << ", " << d_ddot << ")" << endl << endl;
 
-					//********************** GENERATE PREDICTIONS FROM SENSOR FUSION DATA **************************
+					// ********************* GENERATE PREDICTIONS FROM SENSOR FUSION DATA **************************
 					// The data format for each car is: [ id, x, y, vx, vy, s, d]. The id is a unique identifier for that car. The x, y values are in global map coordinates, and the vx, vy values are the velocity components, also in reference to the global map. Finally s and d are the Frenet coordinates for that car.
 					vector<Vehicle> other_cars;
 					map<int, vector<vector<double>>> predictions;
@@ -338,31 +350,28 @@ int main() {
 						predictions[v_id] = preds;
 					}
 
-					// DEBUG
-					cout << "sensor fusion: (id, x, y, vx, vy, s, d)" << endl;
-					for (auto sf: sensor_fusion) {
-						cout << sf[0] << ": " << sf[1] << "," << sf[2] << "," << sf[3] << "," << sf[4] << "," << sf[5] << "," << sf[6] << endl;
-					}
-					cout << "sensor fusion: (id, dist)" << endl;
-					for (auto sf: sensor_fusion) cout << sf[0] << ":" << distance(pos_x, pos_y, sf[1], sf[2]) << ", ";
-					cout << endl << endl;
-					cout << endl;
-					cout << "predictions: (id, (s1,d1) (s2,d2) ... (sn,dn) - spaced out)" << endl;
-					for (auto pred : predictions) {
-						cout << pred.first << " ";
-						auto sd = pred.second;
-    				for (int i = 0; i <= N_SAMPLES; i += N_SAMPLES/5-1) {
-							cout << "(" << sd[i][0] << "," << sd[i][1] << ") ";
-						}
-						cout << endl;
-					}
-					cout << endl;
+					// // DEBUG
+					// cout << "****SENSOR FUSION DATA****" << endl;
+					// cout << "sensor fusion: (id, x, y, vx, vy, s, d), (distance from ego)" << endl;
+					// for (auto sf: sensor_fusion) {
+					// 	cout << "(" << sf[0] << ": " << sf[1] << "," << sf[2] << "," << sf[3] << "," << sf[4] << "," << sf[5] << "," << sf[6] << ") (" << distance(pos_x, pos_y, sf[1], sf[2]) << ")" << endl;
+					// }
+					// cout << endl << "predictions: (id, (i s1,d1) (i s2,d2) ... (i sn,dn) - spaced out)" << endl;
+					// for (auto pred : predictions) {
+					// 	cout << pred.first << " ";
+					// 	auto sd = pred.second;
+    			// 	for (int i = 0; i < N_SAMPLES; i += N_SAMPLES/3-1) {
+					// 		cout << "(" << i << " " << sd[i][0] << "," << sd[i][1] << ") ";
+					// 	}
+					// 	cout << endl;
+					// }
+					// cout << endl;
 
 					// ******************************* DETERMINE BEST TRAJECTORY ***********************************
 					// where the magic happens?
 					// trajectories come back in a list of s values and a list of d values (not zipped together)
 					vector<vector<double>> frenet_traj = my_car.get_best_frenet_trajectory(predictions);
-					vector<vector<double>> best_xy_traj;
+					vector<double> traj_xy_point, best_x_traj, best_y_traj, interpolated_x_traj, interpolated_y_traj;
 
 					// // DEBUG
 					// cout << "first 5 frenet traj pts: ";
@@ -370,40 +379,58 @@ int main() {
 					// 	cout << "(" << frenet_traj[0][i] << "," << frenet_traj[1][i] << ") ";
 					// }
 					// cout << endl << endl;
+				
 
-					// *************************** CONVERT AND PRODUCE NEW PATH *****************************
+					// ********************* CONVERT, UPSAMPLE, AND PRODUCE NEW PATH ***********************
 					// convert points from frenet trajectory to xy
 					for (int i = 0; i < N_SAMPLES; i++) {
-						best_xy_traj.push_back(getXY(frenet_traj[0][i], frenet_traj[1][i], interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y));
-					}
-					// add previous path, if any, to next path
-					for(int i = 0; i < subpath_size; i++) {
-						next_x_vals.push_back(previous_path_x[i]);
-						next_y_vals.push_back(previous_path_y[i]);
-					}
-					// add xy points from newly generated path
-					for (int i = 0; i < (NUM_PATH_POINTS - subpath_size); i++) {
-						next_x_vals.push_back(best_xy_traj[i][0]);
-						next_y_vals.push_back(best_xy_traj[i][1]);
+						traj_xy_point = getXY(frenet_traj[0][i], frenet_traj[1][i], interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y);
+						best_x_traj.push_back(traj_xy_point[0]);
+						best_y_traj.push_back(traj_xy_point[1]);
 					}
 
+					// interpolate to upsample x and y trajectories
+					vector<double> coarse_times;
+					for (int i = 0; i < N_SAMPLES; i++) {
+						coarse_times.push_back(i*DT);
+					}
+					interpolated_x_traj = interpolate_points(coarse_times, best_x_traj, PATH_DT, (NUM_PATH_POINTS - subpath_size));
+					interpolated_y_traj = interpolate_points(coarse_times, best_y_traj, PATH_DT, (NUM_PATH_POINTS - subpath_size));
+
+					// add previous path, if any, to next path
+					for(int i = 1; i < subpath_size; i++) {
+						next_x_vals.push_back(previous_path_x[i]);
+						next_y_vals.push_back(previous_path_y[i]);
+					} 
+					// add xy points from newly generated path
+					for (int i = 1; i < (NUM_PATH_POINTS - subpath_size); i++) {
+						//if (subpath_size == 0 && i == 0) continue; // maybe skip start position as a path point?
+						next_x_vals.push_back(interpolated_x_traj[i]);
+						next_y_vals.push_back(interpolated_y_traj[i]);
+					} 
+
 					// DEBUG
-					cout << "xy trajectory (5 spaced-out points, x,y):" << endl;
-					for (int i = 0; i <= NUM_PATH_POINTS; i += NUM_PATH_POINTS/5-1) {
-						cout << "(" << best_xy_traj[i][0] << "," << best_xy_traj[i][1] << ") ";
+					cout << "****TRAJECTORY DATA****"
+					cout << "xy trajectory (spaced-out; i: x,y):" << endl;
+					for (int i = 0; i < N_SAMPLES; i += N_SAMPLES/3-1) {
+						cout << "(" << i << ": " << best_x_traj[i] << "," << best_y_traj[i] << ") ";
 					}
 					cout << endl << endl;
+
+
 					/********************* simple, drive straight example *********************
+					double dist_incr = 0.5;
 					for(int i = 0; i < 50; i++) {
-						next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
-						next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
+						next_x_vals.push_back(car_x+(dist_incr*i)*cos(deg2rad(car_yaw)));
+						next_y_vals.push_back(car_y+(dist_incr*i)*sin(deg2rad(car_yaw)));
 					}***************************************************************************/
 					/************************ drive in circles example ************************
+					double dist_incr = 0.5;
 					for(int i = 0; i < 50-subpath_size; i++) {    
-						next_x_vals.push_back(pos_x+(dist_inc)*cos(angle+(i+1)*(pi()/100)));
-						next_y_vals.push_back(pos_y+(dist_inc)*sin(angle+(i+1)*(pi()/100)));
-						pos_x += (dist_inc)*cos(angle+(i+1)*(pi()/100));
-						pos_y += (dist_inc)*sin(angle+(i+1)*(pi()/100));
+						next_x_vals.push_back(pos_x+(dist_incr)*cos(angle+(i+1)*(pi()/100)));
+						next_y_vals.push_back(pos_y+(dist_incr)*sin(angle+(i+1)*(pi()/100)));
+						pos_x += (dist_incr)*cos(angle+(i+1)*(pi()/100));
+						pos_y += (dist_incr)*sin(angle+(i+1)*(pi()/100));
 					}***************************************************************************/
 					/***************** drive along interpolated waypoints example ****************
 					// get next waypoint from current car position
@@ -414,8 +441,17 @@ int main() {
 					}******************************************************************************/
 
 					// DEBUG
-					cout << "next 5 x: ";
-					for (int i = 0; i < 5; i++) cout << next_x_vals[i] << ", ";
+					cout << "full path (x,y):  \tprevious path (x,y):" << endl;
+					for (int i = 0; i < next_x_vals.size(); i++) {
+						cout << next_x_vals[i] << ", " << next_y_vals[i];
+						if (i < previous_path_x.size()) {
+							cout << "  \t" << previous_path_x[i] << ", " << previous_path_y[i];
+							if (i == PREVIOUS_PATH_POINTS_TO_KEEP-1) {
+								cout << "\tEND OF KEPT PREVIOUS PATH POINTS";
+							}
+						} 
+						cout << endl;
+					}
 					cout << endl << endl;
 
 					msgJson["next_x"] = next_x_vals;

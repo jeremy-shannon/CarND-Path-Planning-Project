@@ -5,8 +5,9 @@
 #define FOLLOW_DISTANCE 6.0             // distance to keep behind leading cars
 #define PERCENT_V_DIFF_TO_MAKE_UP 0.5   // the percent difference between current velocity and target velocity to allow ego car to make up in a single trajectory      
 
-#define PREVIOUS_PATH_POINTS_TO_KEEP 10
-#define NUM_PATH_POINTS 150
+#define PREVIOUS_PATH_POINTS_TO_KEEP 25
+#define NUM_PATH_POINTS 50
+#define PATH_DT 0.05                    // seconds
 
 #define TRACK_LENGTH 6945.554           // meters
 
@@ -14,16 +15,17 @@
 #define NUM_WAYPOINTS_BEHIND 5
 #define NUM_WAYPOINTS_AHEAD 5
 
-#define N_SAMPLES 150
-#define DT 0.02                         // seconds
+// for trajectory generation/evaluation and non-ego car predictions
+#define N_SAMPLES 20
+#define DT 0.2                          // seconds
 
-#define NUM_RANDOM_TRAJ_TO_GEN 10       // the number of perturbed trajectories to generate (for each duration)
-#define NUM_TIMESTEPS_TO_PERTURB 5      // the number of timesteps, +/- target time, to perturb trajectories
+#define NUM_RANDOM_TRAJ_TO_GEN 1        // the number of perturbed trajectories to generate (for each perturbed duration)
+#define NUM_TIMESTEPS_TO_PERTURB 1      // the number of timesteps, +/- target time, to perturb trajectories
 
 // sigma values for perturbing targets
-#define SIGMA_S 5.0                    // s
-#define SIGMA_S_DOT 4.0                 // s_dot
-#define SIGMA_S_DDOT 2.0                // s
+#define SIGMA_S 5.0                     // s
+#define SIGMA_S_DOT 2.0                 // s_dot
+#define SIGMA_S_DDOT 0.5                // s
 #define SIGMA_D 1.0                     // d
 #define SIGMA_D_DOT 1.0                 // d_dot
 #define SIGMA_D_DDOT 1.0                // d_double_dot
