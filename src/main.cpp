@@ -196,6 +196,7 @@ int main() {
 					double car_d = j[1]["d"];
 					double car_yaw = j[1]["yaw"];
 					double car_speed = j[1]["speed"];
+					car_speed *= 0.44704;  														// convert mph to m/s
 					// Previous path data given to the Planner
 					auto previous_path_x = j[1]["previous_path_x"];
 					auto previous_path_y = j[1]["previous_path_y"];
@@ -334,8 +335,18 @@ int main() {
 						double d_d2 = (pos_d2 - pos_d3) / PATH_DT;
 						s_ddot = (s_dot - s_d2) / PATH_DT;
 						d_ddot = (d_dot - d_d2) / PATH_DT;
+
+						// DEBUG
+						cout << "****CALCULATION INTERMEDIATE POINTS****" << endl;
+						cout << "pos_x 1 thru 4: " << pos_x << ", " << pos_x2 << ", " << pos_x3 << ", " << pos_x4 << endl;
+						cout << "pos_y 1 thru 4: " << pos_y << ", " << pos_y2 << ", " << pos_y3 << ", " << pos_y4 << endl;
+						cout << "angle 1 thru 3: " << angle << ", " << angle2 << ", " << angle3 << endl;
+						cout << "pos_s 1 thru 3: " << pos_s << ", " << pos_s2 << ", " << pos_s3 << endl;
+						cout << "s_dot 1 thru 2: " << s_dot << ", " << s_d2 << endl;
+						cout << "s_ddot: " << s_ddot << endl;
+						cout << endl;
 					}		
-					
+
 					Vehicle my_car = Vehicle(pos_s, s_dot, s_ddot, pos_d, d_dot, d_ddot);
 
 					// DEBUG
