@@ -214,11 +214,13 @@ int main() {
 					// DEBUG
 					cout << endl << "**************** ITERATION BEGIN ****************" << endl << endl;
 
+					
 					// ********************* CONSTRUCT INTERPOLATED WAYPOINTS OF NEARBY AREA **********************
 					int num_waypoints = map_waypoints_x.size();
 					int next_waypoint_index = NextWaypoint(car_x, car_y, car_yaw, map_waypoints_x, map_waypoints_y);
-					vector<double> coarse_waypoints_s, coarse_waypoints_x, coarse_waypoints_y;
-					for (int i = -NUM_WAYPOINTS_BEHIND; i < NUM_WAYPOINTS_AHEAD; i++) {
+					vector<double> coarse_waypoints_s, coarse_waypoints_x, coarse_waypoints_y, 
+												 coarse_waypoints_dx, coarse_waypoints_dy;
+				  for (int i = -NUM_WAYPOINTS_BEHIND; i < NUM_WAYPOINTS_AHEAD; i++) {
 						// for smooting, take so many previous and so many subsequent waypoints
 						int idx = (next_waypoint_index+i) % num_waypoints;
 						if (idx < 0) {
@@ -237,6 +239,8 @@ int main() {
 						coarse_waypoints_s.push_back(current_s);
 						coarse_waypoints_x.push_back(map_waypoints_x[idx]);
 						coarse_waypoints_y.push_back(map_waypoints_y[idx]);
+						coarse_waypoints_dx.push_back(map_waypoints_dx[idx]);
+						coarse_waypoints_dy.push_back(map_waypoints_dy[idx]);
 					}
 
 					// DEBUG
@@ -250,11 +254,18 @@ int main() {
 					cout << "coarse y: ";
 					for (auto y: coarse_waypoints_y) cout << y << ", ";
 					cout << endl;
+					cout << "coarse dx: ";
+					for (auto dx: coarse_waypoints_dx) cout << dx << ", ";
+					cout << endl;
+					cout << "coarse dy: ";
+					for (auto dy: coarse_waypoints_dy) cout << dy << ", ";
+					cout << endl;
 
-					// interpolation parameters, 240 points at 0.5 distance increment = 120 m = 4 30-m sections
+					// interpolation parameters
 					double dist_inc = 1.0;	
-					int num_interpolation_points = 275;
-					vector<double> interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y;
+					int num_interpolation_points = 6945;
+					vector<double> interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y, 
+												 interpolated_waypoints_dx, interpolated_waypoints_dy;
 					// interpolated s is simply...
 					interpolated_waypoints_s.push_back(coarse_waypoints_s[0]);
 					for (int i = 1; i < num_interpolation_points; i++) {
@@ -262,6 +273,8 @@ int main() {
 					}
 					interpolated_waypoints_x = interpolate_points(coarse_waypoints_s, coarse_waypoints_x, dist_inc, num_interpolation_points);
 					interpolated_waypoints_y = interpolate_points(coarse_waypoints_s, coarse_waypoints_y, dist_inc, num_interpolation_points);
+					interpolated_waypoints_dx = interpolate_points(coarse_waypoints_s, coarse_waypoints_dx, dist_inc, num_interpolation_points);
+					interpolated_waypoints_dy = interpolate_points(coarse_waypoints_s, coarse_waypoints_dy, dist_inc, num_interpolation_points);
 
 					// DEBUG
 					cout << "interp s: ";
@@ -278,14 +291,26 @@ int main() {
 					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) { 
 						cout << "(" << i << ")" << interpolated_waypoints_y[i] << " ";
 					}
+					cout << endl;
+					cout << "interp dx: ";
+					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) {
+						cout << "(" << i << ")" << interpolated_waypoints_dx[i] << " ";
+					}
+					cout << endl;
+					cout << "interp dy: ";
+					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) { 
+						cout << "(" << i << ")" << interpolated_waypoints_dy[i] << " ";
+					}
 					cout << endl << endl;
+					
 
 					// **************** DETERMINE EGO CAR PARAMETERS AND CONSTRUCT VEHICLE OBJECT ******************
 					// Vehicle class requires s,s_d,s_dd,d,d_d,d_dd - in that order
 					double pos_s, s_dot, s_ddot;
 					double pos_d, d_dot, d_ddot;
 					// Other values necessary for determining these based on future points in previous path
-					double pos_x, pos_y, angle;
+					double pos_x, pos_y, pos_x2, pos_y2, angle, vel_x1, vel_y1,
+								 pos_x3, pos_y3, vel_x2, vel_y2, acc_x, acc_y;
 
 					int subpath_size = min(PREVIOUS_PATH_POINTS_TO_KEEP, (int)previous_path_x.size());
 
@@ -304,46 +329,53 @@ int main() {
 						// consider current position to be last point of previous path to be kept
 						pos_x = previous_path_x[subpath_size-1];
 						pos_y = previous_path_y[subpath_size-1];
-						double pos_x2 = previous_path_x[subpath_size-2];
-						double pos_y2 = previous_path_y[subpath_size-2];
+						pos_x2 = previous_path_x[subpath_size-2];
+						pos_y2 = previous_path_y[subpath_size-2];
 						angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
 						vector<double> frenet = getFrenet(pos_x, pos_y, angle, interpolated_waypoints_x, interpolated_waypoints_y);
 						//vector<double> frenet = getFrenet(pos_x, pos_y, angle, map_waypoints_x, map_waypoints_y);
 						pos_s = frenet[0];
 						pos_d = frenet[1];
 
-						// have to get another point to calculate s_dot
-						double pos_x3 = previous_path_x[subpath_size-3];
-						double pos_y3 = previous_path_y[subpath_size-3];
-						double angle2 = atan2(pos_y2-pos_y3,pos_x2-pos_x3);
-						frenet = getFrenet(pos_x2, pos_y2, angle2, interpolated_waypoints_x, interpolated_waypoints_y);
-						//frenet = getFrenet(pos_x2, pos_y2, angle2, map_waypoints_x, map_waypoints_y);
-						double pos_s2 = frenet[0];
-						double pos_d2 = frenet[1];
-						s_dot = (pos_s - pos_s2) / PATH_DT;
-						d_dot = (pos_d - pos_d2) / PATH_DT;
-						
-						// and yet another point to calculate s_ddot
-						double pos_x4 = previous_path_x[subpath_size-4];
-						double pos_y4 = previous_path_y[subpath_size-4];
-						double angle3 = atan2(pos_y3-pos_y4,pos_x3-pos_x4);
-						frenet = getFrenet(pos_x3, pos_y3, angle3, interpolated_waypoints_x, interpolated_waypoints_y);
-						//frenet = getFrenet(pos_x3, pos_y3, angle3, map_waypoints_x, map_waypoints_y);
-						double pos_s3 = frenet[0];
-						double pos_d3 = frenet[1];
-						double s_d2 = (pos_s2 - pos_s3) / PATH_DT;
-						double d_d2 = (pos_d2 - pos_d3) / PATH_DT;
-						s_ddot = (s_dot - s_d2) / PATH_DT;
-						d_ddot = (d_dot - d_d2) / PATH_DT;
+						// determine dx, dy vector from set of interpoated waypoints, with pos_x,pos_y as reference point;
+						// since interpolated waypoints are ~1m apart and path points tend to be <0.5m apart, these 
+						// values can be reused for previous two points (and using the previous waypoint data may be
+						// more accurate) to calculate vel_s (s_dot), vel_d (d_dot), acc_s (s_ddot), and acc_d (d_ddot)
+						int next_interp_waypoint_index = NextWaypoint(pos_x, pos_y, angle, interpolated_waypoints_x, 
+																													interpolated_waypoints_y);
+						double dx = interpolated_waypoints_dx[next_interp_waypoint_index - 1];
+						double dy = interpolated_waypoints_dy[next_interp_waypoint_index - 1];
+						// sx,sy vector is perpendicular to dx,dy
+						double sx = -dy;
+						double sy = dx;
+
+						// calculate s_dot & d_dot
+						vel_x1 = (pos_x - pos_x2) / PATH_DT;
+						vel_y1 = (pos_y - pos_y2) / PATH_DT;
+						// want projection of xy velocity vector (V) onto S (sx,sy) and D (dx,dy) vectors, and since S 
+						// and D are unit vectors this is simply the dot products of V with S and V with D
+						s_dot = vel_x1 * sx + vel_y1 * sy;
+						d_dot = vel_x1 * dx + vel_y1 * dy;
+
+						// have to get another point to calculate s_ddot, d_ddot from xy acceleration
+						pos_x3 = previous_path_x[subpath_size-3];
+						pos_y3 = previous_path_y[subpath_size-3];
+						vel_x2 = (pos_x2 - pos_x3) / PATH_DT;
+						vel_y2 = (pos_y2 - pos_y3) / PATH_DT;
+						acc_x = (vel_x1 - vel_x2) / PATH_DT;
+						acc_y = (vel_y1 - vel_y2) / PATH_DT;
+						s_ddot = acc_x * sx + acc_y * sy;
+						d_ddot = acc_x * dx + acc_y * dy;						
 
 						// DEBUG
 						cout << "****CALCULATION INTERMEDIATE POINTS****" << endl;
-						cout << "pos_x 1 thru 4: " << pos_x << ", " << pos_x2 << ", " << pos_x3 << ", " << pos_x4 << endl;
-						cout << "pos_y 1 thru 4: " << pos_y << ", " << pos_y2 << ", " << pos_y3 << ", " << pos_y4 << endl;
-						cout << "angle 1 thru 3: " << angle << ", " << angle2 << ", " << angle3 << endl;
-						cout << "pos_s 1 thru 3: " << pos_s << ", " << pos_s2 << ", " << pos_s3 << endl;
-						cout << "s_dot 1 thru 2: " << s_dot << ", " << s_d2 << endl;
-						cout << "s_ddot: " << s_ddot << endl;
+						cout << "pos_x 1 thru 3: " << pos_x << ", " << pos_x2 << ", " << pos_x3 << endl;
+						cout << "pos_y 1 thru 3: " << pos_y << ", " << pos_y2 << ", " << pos_y3 << endl;
+						cout << "angle: " << angle << endl;
+						cout << "vel_x 1 thru 2: " << vel_x1 << ", " << vel_x2 << endl;
+						cout << "vel_y 1 thru 2: " << vel_y1 << ", " << vel_y2 << endl;
+						cout << "acc_x: " << acc_x << endl;
+						cout << "acc_y: " << acc_y << endl;
 						cout << endl;
 					}		
 
@@ -388,7 +420,9 @@ int main() {
 					// ******************************* DETERMINE BEST TRAJECTORY ***********************************
 					// where the magic happens?
 					// trajectories come back in a list of s values and a list of d values (not zipped together)
-					vector<vector<double>> frenet_traj = my_car.get_best_frenet_trajectory(predictions);
+					// duration for trajectory is variable, depending on number of previous points
+					double duration = N_SAMPLES * DT - subpath_size * PATH_DT;
+					vector<vector<double>> frenet_traj = my_car.get_best_frenet_trajectory(predictions, duration);
 					vector<double> traj_xy_point, best_x_traj, best_y_traj, interpolated_x_traj, interpolated_y_traj;
 
 					// // DEBUG
@@ -400,8 +434,18 @@ int main() {
 				
 
 					// ********************* CONVERT, UPSAMPLE, AND PRODUCE NEW PATH ***********************
-					// convert points from frenet trajectory to xy
-					for (int i = 0; i < N_SAMPLES; i++) {
+					// begin by pushing the next-to-last point from the previous path for setting the spline
+					// the last point should be the first point in the returned trajectory, but because of 
+					// imprecision, also add that point manually
+					if (subpath_size >= 2) {
+						best_x_traj.push_back(previous_path_x[subpath_size-2]);
+						best_y_traj.push_back(previous_path_y[subpath_size-2]);
+						best_x_traj.push_back(previous_path_x[subpath_size-1]);
+						best_y_traj.push_back(previous_path_y[subpath_size-1]);
+					}
+					
+					// convert points from frenet trajectory to xy, skip the first point (included above)
+					for (int i = 1; i < N_SAMPLES; i++) {
 						traj_xy_point = getXY(frenet_traj[0][i], frenet_traj[1][i], interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y);
 						//traj_xy_point = getXY(frenet_traj[0][i], frenet_traj[1][i], map_waypoints_s, map_waypoints_x, map_waypoints_y);
 						best_x_traj.push_back(traj_xy_point[0]);
@@ -410,22 +454,29 @@ int main() {
 
 					// interpolate to upsample x and y trajectories
 					vector<double> coarse_times;
-					for (int i = 0; i < N_SAMPLES; i++) {
+					// manually add times for first two points of spline (last two points of previous path)
+					int extra_points = 0;
+					if (subpath_size >= 2) {
+						coarse_times.push_back(-0.02);
+						coarse_times.push_back(0);
+						extra_points = 2;
+					}
+					for (int i = 1; i < N_SAMPLES; i++) {
 						coarse_times.push_back(i*DT);
 					}
-					interpolated_x_traj = interpolate_points(coarse_times, best_x_traj, PATH_DT, (NUM_PATH_POINTS - subpath_size));
-					interpolated_y_traj = interpolate_points(coarse_times, best_y_traj, PATH_DT, (NUM_PATH_POINTS - subpath_size));
+					interpolated_x_traj = interpolate_points(coarse_times, best_x_traj, PATH_DT, (NUM_PATH_POINTS - subpath_size + extra_points));
+					interpolated_y_traj = interpolate_points(coarse_times, best_y_traj, PATH_DT, (NUM_PATH_POINTS - subpath_size + extra_points));
 
 					// add previous path, if any, to next path
-					for(int i = 1; i < subpath_size; i++) {
+					for(int i = 0; i < subpath_size; i++) {
 						next_x_vals.push_back(previous_path_x[i]);
 						next_y_vals.push_back(previous_path_y[i]);
 					} 
 					// add xy points from newly generated path
-					for (int i = 1; i < (NUM_PATH_POINTS - subpath_size); i++) {
+					for (int i = 0; i < (NUM_PATH_POINTS - subpath_size); i++) {
 						//if (subpath_size == 0 && i == 0) continue; // maybe skip start position as a path point?
-						next_x_vals.push_back(interpolated_x_traj[i]);
-						next_y_vals.push_back(interpolated_y_traj[i]);
+						next_x_vals.push_back(interpolated_x_traj[i + extra_points]);
+						next_y_vals.push_back(interpolated_y_traj[i + extra_points]);
 					} 
 
 					// DEBUG

@@ -29,7 +29,7 @@ public:
   */
   virtual ~Vehicle();
 
-  vector<vector<double>> get_best_frenet_trajectory(map<int, vector<vector<double>>> predictions);
+  vector<vector<double>> get_best_frenet_trajectory(map<int, vector<vector<double>>> predictions, double duration);
 
   void update_available_states();
 

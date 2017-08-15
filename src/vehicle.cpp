@@ -27,7 +27,7 @@ Vehicle::Vehicle(double s, double s_d, double s_dd, double d, double d_d, double
 
 Vehicle::~Vehicle() {}
 
-vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vector<double>>> predictions) {
+vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vector<double>>> predictions, double duration) {
     
     update_available_states();
 
@@ -103,7 +103,7 @@ vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vecto
     // DEBUG - ONLY KEEP LANE AND NO PERTURB
     state = "KL";
     vector<vector<double>> target = get_target_for_state(state, predictions);
-    best_frenet_traj = generate_traj_for_target(target, N_SAMPLES*DT);
+    best_frenet_traj = generate_traj_for_target(target, duration);
 
     // DEBUG
     cout << "chosen state: " << best_traj_state << ", cost: " << best_cost << endl;
