@@ -18,10 +18,12 @@ public:
   double d_dd;
   string state;
   vector<string> available_states;
+  vector<double> s_traj_coeffs, d_traj_coeffs;
 
   /**
-  * Constructor
+  * Constructors
   */
+  Vehicle();
   Vehicle(double s, double s_d, double s_dd, double d, double d_d, double d_dd);
 
   /**
@@ -40,6 +42,10 @@ public:
   vector<vector<double>> perturb(vector<vector<double>> target_s_and_d);
 
   vector<vector<double>> generate_traj_for_target(vector<vector<double>> perturbed_target, double duration);
+
+  vector<double> differentiate_coeffs(vector<double> coeffs); 
+
+  double evaluate_coeffs_at_time(vector<double> coeffs, double time);
 
   vector<vector<double>> generate_predictions();
 

@@ -77,7 +77,7 @@ int NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector
 }
 
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
-vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)
+vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y, vector<double> maps_s)
 {
 	int next_wp = NextWaypoint(x,y, theta, maps_x,maps_y);
 	int prev_wp;
@@ -105,7 +105,7 @@ vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x
 		frenet_d *= -1;
 	}
 	// calculate s value
-	double frenet_s = 0;
+	double frenet_s = maps_s[0];
 	for(int i = 0; i < prev_wp; i++)
 	{
 		frenet_s += distance(maps_x[i],maps_y[i],maps_x[i+1],maps_y[i+1]);
@@ -144,6 +144,8 @@ int main() {
   vector<double> map_waypoints_dx;
   vector<double> map_waypoints_dy;
 
+	Vehicle my_car = Vehicle();
+
   // Waypoint map to read from
   string map_file_ = "../data/highway_map.csv";
   // The max s value before wrapping around the track back to 0
@@ -171,7 +173,7 @@ int main() {
   	map_waypoints_dy.push_back(d_y);
   }
 
-  h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &my_car](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -332,7 +334,7 @@ int main() {
 						pos_x2 = previous_path_x[subpath_size-2];
 						pos_y2 = previous_path_y[subpath_size-2];
 						angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
-						vector<double> frenet = getFrenet(pos_x, pos_y, angle, interpolated_waypoints_x, interpolated_waypoints_y);
+						vector<double> frenet = getFrenet(pos_x, pos_y, angle, interpolated_waypoints_x, interpolated_waypoints_y, interpolated_waypoints_s);
 						//vector<double> frenet = getFrenet(pos_x, pos_y, angle, map_waypoints_x, map_waypoints_y);
 						pos_s = frenet[0];
 						pos_d = frenet[1];
@@ -365,7 +367,7 @@ int main() {
 						acc_x = (vel_x1 - vel_x2) / PATH_DT;
 						acc_y = (vel_y1 - vel_y2) / PATH_DT;
 						s_ddot = acc_x * sx + acc_y * sy;
-						d_ddot = acc_x * dx + acc_y * dy;						
+						d_ddot = acc_x * dx + acc_y * dy;		
 
 						// DEBUG
 						cout << "****CALCULATION INTERMEDIATE POINTS****" << endl;
@@ -377,13 +379,43 @@ int main() {
 						cout << "acc_x: " << acc_x << endl;
 						cout << "acc_y: " << acc_y << endl;
 						cout << endl;
+
+						// try, instead, differentiating trajectory coefficients
+						double eval_time, pos_s2, pos_d2, s_dot2, d_dot2, s_ddot2, d_ddot2;
+						vector<double> s_dot_coeffs = my_car.differentiate_coeffs(my_car.s_traj_coeffs);			
+						vector<double> d_dot_coeffs = my_car.differentiate_coeffs(my_car.d_traj_coeffs);			
+						vector<double> s_ddot_coeffs = my_car.differentiate_coeffs(s_dot_coeffs);			
+						vector<double> d_ddot_coeffs = my_car.differentiate_coeffs(d_dot_coeffs);
+						eval_time = (NUM_PATH_POINTS - subpath_size) * PATH_DT;
+					  pos_s2 = my_car.evaluate_coeffs_at_time(my_car.s_traj_coeffs, eval_time);		
+						pos_d2 = my_car.evaluate_coeffs_at_time(my_car.d_traj_coeffs, eval_time);		
+						s_dot2 = my_car.evaluate_coeffs_at_time(s_dot_coeffs, eval_time);			
+						d_dot2 = my_car.evaluate_coeffs_at_time(d_dot_coeffs, eval_time);			
+						s_ddot2 = my_car.evaluate_coeffs_at_time(s_ddot_coeffs, eval_time);			
+						d_ddot2 = my_car.evaluate_coeffs_at_time(d_ddot_coeffs, eval_time);		
+
+						s_dot = s_dot2;
+						d_dot = d_dot2;
+						d_ddot = d_ddot2;
+						s_ddot = s_ddot2;	
+
+						// DEBUG
+						cout << "****ALTERNATE METHOD: DIFFERENTIATE/EVALUATE POLYNOMIALS****" << endl;
+						cout << "state (s,s_d,s_dd),(d,d_d,d_dd): (" << pos_s2 << ", " << s_dot2 << ", " << s_ddot2;
+						cout << ") (" << pos_d2 << ", " << d_dot2 << ", " << d_ddot2 << ")" << endl << endl;
 					}		
 
-					Vehicle my_car = Vehicle(pos_s, s_dot, s_ddot, pos_d, d_dot, d_ddot);
+					my_car.s    = pos_s;           // s position
+					my_car.s_d  = s_dot;           // s dot - velocity in s
+					my_car.s_dd = s_ddot;          // s dot-dot - acceleration in s
+					my_car.d    = pos_d;           // d position
+					my_car.d_d  = d_dot;           // d dot - velocity in d
+					my_car.d_dd = d_ddot;          // d dot-dot - acceleration in d
 
 					// DEBUG
 					cout << "****EGO CAR DATA****" << endl;
 					cout << "ego state (x,y,s,d,yaw,speed): " << car_x << ", " << car_y << ", " << car_s << ", " << car_d << ", " << car_yaw << ", " << car_speed << endl;
+					cout << "end_path_s/d: " << end_path_s << ", " << end_path_d << endl;
 					cout << "planning state (x,y,yaw): " << pos_x << ", " << pos_y << ", " << angle << endl;
 					cout << "planning state (s,s_d,s_dd),(d,d_d,d_dd): (" << pos_s << ", " << s_dot << ", " << s_ddot;
 					cout << ") (" << pos_d << ", " << d_dot << ", " << d_ddot << ")" << endl << endl;

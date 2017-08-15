@@ -13,6 +13,8 @@
 /**
  * Initializes Vehicle
  */
+Vehicle::Vehicle() {}
+
 Vehicle::Vehicle(double s, double s_d, double s_dd, double d, double d_d, double d_dd) {
 
     this->s    = s;             // s position
@@ -160,6 +162,7 @@ vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vect
     // longitudinal velocity : current velocity + difference between current and limit * percent allowed to 
     // make up
     double target_s_d = this->s_d + (SPEED_LIMIT - this->s_d) * PERCENT_V_DIFF_TO_MAKE_UP;
+    target_s_d = 10;    
     // longitudinal acceleration : zero ?
     double target_s_dd = 0;
     // longitudinal acceleration : difference between current/target velocity over trajectory duration?
@@ -167,6 +170,7 @@ vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vect
     // longitudinal displacement : current displacement plus difference in current/target velocity times 
     // trajectory duration
     double target_s = this->s + (target_s_d + this->s_d) / 2 * (N_SAMPLES * DT);
+    target_s = this->s + 20;
 
     vector<double> leading_vehicle_s_and_sdot;
 
@@ -267,15 +271,15 @@ vector<vector<double>> Vehicle::generate_traj_for_target(vector<vector<double>> 
     vector<double> current_d = {this->d, this->d_d, this->d_dd};
 
     // determine coefficients of optimal JMT 
-    vector<double> s_traj_coeffs = get_traj_coeffs(current_s, target_s, duration);
-    vector<double> d_traj_coeffs = get_traj_coeffs(current_d, target_d, duration);
+    this->s_traj_coeffs = get_traj_coeffs(current_s, target_s, duration);
+    this->d_traj_coeffs = get_traj_coeffs(current_d, target_d, duration);
 
     // // DEBUG
     // cout << "s coeffs: ";
-    // for (auto s : s_traj_coeffs) cout << s << ",";
+    // for (auto s : this->s_traj_coeffs) cout << s << ",";
     // cout << endl;
     // cout << "d coeffs: ";
-    // for (auto d : d_traj_coeffs) cout << d << ",";
+    // for (auto d : this->d_traj_coeffs) cout << d << ",";
     // cout << endl << endl;
 
     vector<double> s_traj;
@@ -286,14 +290,30 @@ vector<vector<double>> Vehicle::generate_traj_for_target(vector<vector<double>> 
         double t = i * DT;
         double s_val = 0, d_val = 0;
         for (int j = 0; j < s_traj_coeffs.size(); j++) {
-            s_val += s_traj_coeffs[j] * pow(t, j);
-            d_val += d_traj_coeffs[j] * pow(t, j);
+            s_val += this->s_traj_coeffs[j] * pow(t, j);
+            d_val += this->d_traj_coeffs[j] * pow(t, j);
         }
         s_traj.push_back(s_val);
         d_traj.push_back(d_val);
     }
 
     return {s_traj, d_traj};
+}
+
+vector<double> Vehicle::differentiate_coeffs(vector<double> coeffs) {
+    vector<double> diff_coeffs;
+    for (int i = 1; i < coeffs.size(); i++) {
+        diff_coeffs.push_back(i * coeffs[i]);
+    }
+    return diff_coeffs;
+}
+
+double Vehicle::evaluate_coeffs_at_time(vector<double> coeffs, double time) {
+    double eval = 0;
+    for (int i = 0; i < coeffs.size(); i++) {
+        eval += coeffs[i] * pow(time, i);
+    }
+    return eval;
 }
 
 vector<vector<double>> Vehicle::generate_predictions() {
