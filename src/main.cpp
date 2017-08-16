@@ -245,27 +245,27 @@ int main() {
 						coarse_waypoints_dy.push_back(map_waypoints_dy[idx]);
 					}
 
-					// DEBUG
-					cout << "****WAYPOINT INTERPOLATION****" << endl;
-					cout << "coarse s: ";
-					for (auto s: coarse_waypoints_s) cout << s << ", ";
-					cout << endl;
-					cout << "coarse x: ";
-					for (auto x: coarse_waypoints_x) cout << x << ", ";
-					cout << endl;
-					cout << "coarse y: ";
-					for (auto y: coarse_waypoints_y) cout << y << ", ";
-					cout << endl;
-					cout << "coarse dx: ";
-					for (auto dx: coarse_waypoints_dx) cout << dx << ", ";
-					cout << endl;
-					cout << "coarse dy: ";
-					for (auto dy: coarse_waypoints_dy) cout << dy << ", ";
-					cout << endl;
+					// // DEBUG
+					// cout << "****WAYPOINT INTERPOLATION****" << endl;
+					// cout << "coarse s: ";
+					// for (auto s: coarse_waypoints_s) cout << s << ", ";
+					// cout << endl;
+					// cout << "coarse x: ";
+					// for (auto x: coarse_waypoints_x) cout << x << ", ";
+					// cout << endl;
+					// cout << "coarse y: ";
+					// for (auto y: coarse_waypoints_y) cout << y << ", ";
+					// cout << endl;
+					// cout << "coarse dx: ";
+					// for (auto dx: coarse_waypoints_dx) cout << dx << ", ";
+					// cout << endl;
+					// cout << "coarse dy: ";
+					// for (auto dy: coarse_waypoints_dy) cout << dy << ", ";
+					// cout << endl;
 
 					// interpolation parameters
 					double dist_inc = 1.0;	
-					int num_interpolation_points = 6945;
+					int num_interpolation_points = 400;
 					vector<double> interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y, 
 												 interpolated_waypoints_dx, interpolated_waypoints_dy;
 					// interpolated s is simply...
@@ -278,32 +278,32 @@ int main() {
 					interpolated_waypoints_dx = interpolate_points(coarse_waypoints_s, coarse_waypoints_dx, dist_inc, num_interpolation_points);
 					interpolated_waypoints_dy = interpolate_points(coarse_waypoints_s, coarse_waypoints_dy, dist_inc, num_interpolation_points);
 
-					// DEBUG
-					cout << "interp s: ";
-					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) {
-						cout << "(" << i << ")" << interpolated_waypoints_s[i] << " ";
-					}
-					cout << endl;
-					cout << "interp x: ";
-					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) {
-						cout << "(" << i << ")" << interpolated_waypoints_x[i] << " ";
-					}
-					cout << endl;
-					cout << "interp y: ";
-					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) { 
-						cout << "(" << i << ")" << interpolated_waypoints_y[i] << " ";
-					}
-					cout << endl;
-					cout << "interp dx: ";
-					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) {
-						cout << "(" << i << ")" << interpolated_waypoints_dx[i] << " ";
-					}
-					cout << endl;
-					cout << "interp dy: ";
-					for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) { 
-						cout << "(" << i << ")" << interpolated_waypoints_dy[i] << " ";
-					}
-					cout << endl << endl;
+					// // DEBUG
+					// cout << "interp s: ";
+					// for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) {
+					// 	cout << "(" << i << ")" << interpolated_waypoints_s[i] << " ";
+					// }
+					// cout << endl;
+					// cout << "interp x: ";
+					// for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) {
+					// 	cout << "(" << i << ")" << interpolated_waypoints_x[i] << " ";
+					// }
+					// cout << endl;
+					// cout << "interp y: ";
+					// for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) { 
+					// 	cout << "(" << i << ")" << interpolated_waypoints_y[i] << " ";
+					// }
+					// cout << endl;
+					// cout << "interp dx: ";
+					// for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) {
+					// 	cout << "(" << i << ")" << interpolated_waypoints_dx[i] << " ";
+					// }
+					// cout << endl;
+					// cout << "interp dy: ";
+					// for (int i = 0; i <= num_interpolation_points; i += num_interpolation_points/4-1) { 
+					// 	cout << "(" << i << ")" << interpolated_waypoints_dy[i] << " ";
+					// }
+					// cout << endl << endl;
 					
 
 					// **************** DETERMINE EGO CAR PARAMETERS AND CONSTRUCT VEHICLE OBJECT ******************
@@ -369,16 +369,16 @@ int main() {
 						s_ddot = acc_x * sx + acc_y * sy;
 						d_ddot = acc_x * dx + acc_y * dy;		
 
-						// DEBUG
-						cout << "****CALCULATION INTERMEDIATE POINTS****" << endl;
-						cout << "pos_x 1 thru 3: " << pos_x << ", " << pos_x2 << ", " << pos_x3 << endl;
-						cout << "pos_y 1 thru 3: " << pos_y << ", " << pos_y2 << ", " << pos_y3 << endl;
-						cout << "angle: " << angle << endl;
-						cout << "vel_x 1 thru 2: " << vel_x1 << ", " << vel_x2 << endl;
-						cout << "vel_y 1 thru 2: " << vel_y1 << ", " << vel_y2 << endl;
-						cout << "acc_x: " << acc_x << endl;
-						cout << "acc_y: " << acc_y << endl;
-						cout << endl;
+						// // DEBUG
+						// cout << "****CALCULATION INTERMEDIATE POINTS****" << endl;
+						// cout << "pos_x 1 thru 3: " << pos_x << ", " << pos_x2 << ", " << pos_x3 << endl;
+						// cout << "pos_y 1 thru 3: " << pos_y << ", " << pos_y2 << ", " << pos_y3 << endl;
+						// cout << "angle: " << angle << endl;
+						// cout << "vel_x 1 thru 2: " << vel_x1 << ", " << vel_x2 << endl;
+						// cout << "vel_y 1 thru 2: " << vel_y1 << ", " << vel_y2 << endl;
+						// cout << "acc_x: " << acc_x << endl;
+						// cout << "acc_y: " << acc_y << endl;
+						// cout << endl;
 
 						// try, instead, differentiating trajectory coefficients
 						double eval_time, pos_s2, pos_d2, s_dot2, d_dot2, s_ddot2, d_ddot2;
@@ -399,10 +399,10 @@ int main() {
 						d_ddot = d_ddot2;
 						s_ddot = s_ddot2;	
 
-						// DEBUG
-						cout << "****ALTERNATE METHOD: DIFFERENTIATE/EVALUATE POLYNOMIALS****" << endl;
-						cout << "state (s,s_d,s_dd),(d,d_d,d_dd): (" << pos_s2 << ", " << s_dot2 << ", " << s_ddot2;
-						cout << ") (" << pos_d2 << ", " << d_dot2 << ", " << d_ddot2 << ")" << endl << endl;
+						// // DEBUG
+						// cout << "****ALTERNATE METHOD: DIFFERENTIATE/EVALUATE POLYNOMIALS****" << endl;
+						// cout << "state (s,s_d,s_dd),(d,d_d,d_dd): (" << pos_s2 << ", " << s_dot2 << ", " << s_ddot2;
+						// cout << ") (" << pos_d2 << ", " << d_dot2 << ", " << d_ddot2 << ")" << endl << endl;
 					}		
 
 					my_car.s    = pos_s;           // s position
@@ -511,13 +511,13 @@ int main() {
 						next_y_vals.push_back(interpolated_y_traj[i + extra_points]);
 					} 
 
-					// DEBUG
-					cout << "****TRAJECTORY DATA****" << endl;
-					cout << "xy trajectory (spaced-out; i: x,y):" << endl;
-					for (int i = 0; i < N_SAMPLES; i += N_SAMPLES/3-1) {
-						cout << "(" << i << ": " << best_x_traj[i] << "," << best_y_traj[i] << ") ";
-					}
-					cout << endl << endl;
+					// // DEBUG
+					// cout << "****TRAJECTORY DATA****" << endl;
+					// cout << "xy trajectory (spaced-out; i: x,y):" << endl;
+					// for (int i = 0; i < N_SAMPLES; i += N_SAMPLES/3-1) {
+					// 	cout << "(" << i << ": " << best_x_traj[i] << "," << best_y_traj[i] << ") ";
+					// }
+					// cout << endl << endl;
 
 
 					/********************* simple, drive straight example *********************
@@ -542,19 +542,19 @@ int main() {
 						next_y_vals.push_back(interpolated_waypoints_y[next_waypoint_index_interpolated+i]);
 					}******************************************************************************/
 
-					// DEBUG
-					cout << "full path (x,y):  \tprevious path (x,y):" << endl;
-					for (int i = 0; i < next_x_vals.size(); i++) {
-						cout << next_x_vals[i] << ", " << next_y_vals[i];
-						if (i < previous_path_x.size()) {
-							cout << "  \t" << previous_path_x[i] << ", " << previous_path_y[i];
-							if (i == PREVIOUS_PATH_POINTS_TO_KEEP-1) {
-								cout << "\tEND OF KEPT PREVIOUS PATH POINTS";
-							}
-						} 
-						cout << endl;
-					}
-					cout << endl << endl;
+					// // DEBUG
+					// cout << "full path (x,y):  \tprevious path (x,y):" << endl;
+					// for (int i = 0; i < next_x_vals.size(); i++) {
+					// 	cout << next_x_vals[i] << ", " << next_y_vals[i];
+					// 	if (i < previous_path_x.size()) {
+					// 		cout << "  \t" << previous_path_x[i] << ", " << previous_path_y[i];
+					// 		if (i == PREVIOUS_PATH_POINTS_TO_KEEP-1) {
+					// 			cout << "\tEND OF KEPT PREVIOUS PATH POINTS";
+					// 		}
+					// 	} 
+					// 	cout << endl;
+					// }
+					// cout << endl << endl;
 
 					msgJson["next_x"] = next_x_vals;
 					msgJson["next_y"] = next_y_vals;

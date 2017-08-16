@@ -165,25 +165,40 @@ double avg_jerk_cost(vector<double> s_traj) {
   return logistic(avg_jerk / EXPECTED_JERK_IN_ONE_SEC );
 }
 
+double not_middle_lane_cost(vector<double> d_traj) {
+  // penalize not shooting for middle lane (d = 6)
+  for (auto d: d_traj) cout << d << ", ";
+  double end_d = d_traj[d_traj.size()-1];
+  cout << end_d << endl;
+  return logistic(pow(end_d-6, 2));
+}
+
 double calculate_total_cost(vector<double> s_traj, vector<double> d_traj, map<int,vector<vector<double>>> predictions, vector<double> target_s, vector<double> target_d, double target_time, double actual_time) {
 
   double total_cost = 0;
 
-  total_cost += time_diff_cost(target_time, actual_time) * TIME_DIFF_COST_WEIGHT;
-  total_cost += traj_diff_cost(s_traj, target_s) * TRAJ_DIFF_COST_WEIGHT;
-  total_cost += traj_diff_cost(d_traj, target_d) * TRAJ_DIFF_COST_WEIGHT;
-  total_cost += collision_cost(s_traj, d_traj, predictions) * COLLISION_COST_WEIGHT;
-  total_cost += buffer_cost(s_traj, d_traj, predictions) * BUFFER_COST_WEIGHT;
-  total_cost += exceeds_speed_limit_cost(s_traj) * SPEED_LIMIT_COST_WEIGHT;
-  total_cost += efficiency_cost(s_traj) * EFFICIENCY_COST_WEIGHT;
-  total_cost += max_accel_cost(s_traj) * MAX_ACCEL_COST_WEIGHT;
-  total_cost += avg_accel_cost(s_traj) * AVG_ACCEL_COST_WEIGHT;
-  total_cost += max_accel_cost(d_traj) * MAX_ACCEL_COST_WEIGHT;
-  total_cost += avg_accel_cost(d_traj) * AVG_ACCEL_COST_WEIGHT;
-  total_cost += max_jerk_cost(s_traj) * MAX_JERK_COST_WEIGHT;
-  total_cost += avg_jerk_cost(s_traj) * AVG_JERK_COST_WEIGHT;
-  total_cost += max_jerk_cost(d_traj) * MAX_JERK_COST_WEIGHT;
-  total_cost += avg_jerk_cost(d_traj) * AVG_JERK_COST_WEIGHT;
+  //double tdiff = time_diff_cost(target_time, actual_time) * TIME_DIFF_COST_WEIGHT;
+  //double strajd = traj_diff_cost(s_traj, target_s) * TRAJ_DIFF_COST_WEIGHT;
+  //double dtrajd = traj_diff_cost(d_traj, target_d) * TRAJ_DIFF_COST_WEIGHT;
+  double col = collision_cost(s_traj, d_traj, predictions) * COLLISION_COST_WEIGHT;
+  double buf = buffer_cost(s_traj, d_traj, predictions) * BUFFER_COST_WEIGHT;
+  double esl = exceeds_speed_limit_cost(s_traj) * SPEED_LIMIT_COST_WEIGHT;
+  double eff = efficiency_cost(s_traj) * EFFICIENCY_COST_WEIGHT;
+  double mas = max_accel_cost(s_traj) * MAX_ACCEL_COST_WEIGHT;
+  double aas = avg_accel_cost(s_traj) * AVG_ACCEL_COST_WEIGHT;
+  double mad = max_accel_cost(d_traj) * MAX_ACCEL_COST_WEIGHT;
+  double aad = avg_accel_cost(d_traj) * AVG_ACCEL_COST_WEIGHT;
+  double mjs = max_jerk_cost(s_traj) * MAX_JERK_COST_WEIGHT;
+  double ajs = avg_jerk_cost(s_traj) * AVG_JERK_COST_WEIGHT;
+  double mjd = max_jerk_cost(d_traj) * MAX_JERK_COST_WEIGHT;
+  double ajd = avg_jerk_cost(d_traj) * AVG_JERK_COST_WEIGHT;
+  double nml = not_middle_lane_cost(d_traj) * NOT_MIDDLE_LANE_COST_WEIGHT;
+
+  cout << "costs: " << col << ", " << buf << ", " << esl << ", " << eff << ", " << mas << ", " << aas << ", " << mad << ", " << aad << ", " << mjs << ", " << ajs << ", " << mjd << ", " << ajd << ", " << nml << endl;
+
+  total_cost += col + buf + esl + eff + mas + aas + mad + aad + mjs + ajs + mjd + ajd + nml;
+
+  cout << "total cost: " << total_cost << endl;
 
   return total_cost;
 }

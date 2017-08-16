@@ -9,6 +9,7 @@
 #include <math.h>
 #include <iterator>
 #include <random>
+#include <algorithm>
 
 /**
  * Initializes Vehicle
@@ -36,17 +37,17 @@ vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vecto
     // DEBUG
     cout << "available states: "; 
     for (auto st: available_states) cout << st << " ";
-    cout << endl << endl; 
+    cout << endl; 
 
-    vector<vector<double>> best_frenet_traj;
+    vector<vector<double>> best_frenet_traj, best_target;
     double best_cost = 999999;
     string best_traj_state = "";
-    /*
+/*
     for (string state : available_states) {
 
         // target state (s and d) and time
         vector<vector<double>> target_s_and_d = get_target_for_state(state, predictions);
-        double target_time = N_SAMPLES * DT;
+        double target_time = duration;
 
         // DEBUG
         cout << "target s&d for state " << state << ": ";
@@ -57,11 +58,11 @@ vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vecto
             }
             cout << "; ";
         }
-        cout << endl << endl;
+        cout << endl;
 
         // Perturb trajectories, first by duration
         for (int i = -NUM_TIMESTEPS_TO_PERTURB; i <= NUM_TIMESTEPS_TO_PERTURB; i++) {
-            double perturbed_time = target_time + (i * DT);
+            double perturbed_time = target_time + (i * SIGMA_T);
 
             // Perturb by sigma s and d values
             for (int i = 0; i < NUM_RANDOM_TRAJ_TO_GEN; i++) {
@@ -80,39 +81,42 @@ vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vecto
 
                 vector<vector<double>> possible_traj = generate_traj_for_target(perturbed_target, perturbed_time);
 
-                // DEBUG
-                cout << "possible_traj: ";
-				for (int i = 0; i <= N_SAMPLES; i += N_SAMPLES/3-1) {
-                    cout << "(" << possible_traj[0][i] <<  "," << possible_traj[1][i] << ") ";
-                }
-                cout << endl;
+                // // DEBUG
+                // cout << "possible_traj: ";
+				// for (int i = 0; i < N_SAMPLES; i += N_SAMPLES/3-1) {
+                //     cout << "(" << possible_traj[0][i] <<  "," << possible_traj[1][i] << ") ";
+                // }
+                // cout << endl;
 
                 double current_cost = calculate_total_cost(possible_traj[0], possible_traj[1], predictions, target_s_and_d[0], target_s_and_d[1], target_time, perturbed_time);
 
-                // DEBUG
-                cout << "cost: " << current_cost << endl << endl;
+                // // DEBUG
+                // cout << "cost: " << current_cost << endl;
 
                 if (current_cost < best_cost) {
                     best_cost = current_cost;
                     best_frenet_traj = possible_traj;
                     best_traj_state = state;
+                    best_target = perturbed_target;
                 }
             }
         }
     } 
-    */
-
+    
+    // have to call generate_traj_for_target to reset this->s_coeffs etc.
+    generate_traj_for_target(best_target, duration);
+*/
     // DEBUG - ONLY KEEP LANE AND NO PERTURB
     state = "KL";
-    vector<vector<double>> target = get_target_for_state(state, predictions);
-    best_frenet_traj = generate_traj_for_target(target, duration);
+    best_target = get_target_for_state(state, predictions, duration);
+    best_frenet_traj = generate_traj_for_target(best_target, duration);
 
     // DEBUG
-    cout << "chosen state: " << best_traj_state << ", cost: " << best_cost << endl;
+    cout << "chosen state: " << best_traj_state << ", cost: " << best_cost << ", ";
     cout << "target (s,sd,sdd - d,dd,ddd): (";
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 3; j++) {
-            cout << target[i][j];
+            cout << best_target[i][j];
             if (j != 2) cout << ", ";
         }
         cout << "; ";
@@ -122,7 +126,7 @@ vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vecto
     for (int i = 0; i < N_SAMPLES; i += N_SAMPLES/3-1) {
         cout << i << ":(" << best_frenet_traj[0][i] << "," << best_frenet_traj[1][i] << ") ";
     }
-    cout << endl << endl;
+    cout << endl;
 
     return best_frenet_traj;
 }
@@ -145,7 +149,7 @@ void Vehicle::update_available_states() {
     }
 }
 
-vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vector<vector<double>>> predictions) {
+vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vector<vector<double>>> predictions, double duration) {
     // Returns two lists s_target and d_target in a single vector - s_target includes 
     // [s, s_dot, and s_ddot] and d_target includes the same
     // If no leading car found target lane, ego car will make up PERCENT_V_DIFF_TO_MAKE_UP of the difference
@@ -159,18 +163,16 @@ vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vect
     double target_d_d = 0;
     // lateral acceleration : 0
     double target_d_dd = 0;
-    // longitudinal velocity : current velocity + difference between current and limit * percent allowed to 
-    // make up
-    double target_s_d = this->s_d + (SPEED_LIMIT - this->s_d) * PERCENT_V_DIFF_TO_MAKE_UP;
-    target_s_d = 10;    
+    // longitudinal velocity : current velocity + max allowed accel * duration
+    double target_s_d = min(this->s_d + MAX_INSTANTANEOUS_ACCEL/2 * duration, SPEED_LIMIT);
+    //target_s_d = SPEED_LIMIT;    
     // longitudinal acceleration : zero ?
     double target_s_dd = 0;
     // longitudinal acceleration : difference between current/target velocity over trajectory duration?
     //double target_s_dd = (target_s_d - this->s_d) / (N_SAMPLES * DT);
     // longitudinal displacement : current displacement plus difference in current/target velocity times 
     // trajectory duration
-    double target_s = this->s + (target_s_d + this->s_d) / 2 * (N_SAMPLES * DT);
-    target_s = this->s + 20;
+    double target_s = this->s + (this->s_d + target_s_d) / 2 * duration;
 
     vector<double> leading_vehicle_s_and_sdot;
 
@@ -193,17 +195,17 @@ vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vect
     	leading_vehicle_s_and_sdot = get_leading_vehicle_data_for_lane(target_lane, predictions);
     }
     
-    /*       MAYBE THE PROBLEM IS WITH CHANGING TARGETS BASED ON LEADING VEHICLES?
+    //      MAYBE THE PROBLEM IS WITH CHANGING TARGETS BASED ON LEADING VEHICLES?
 
     // replace target_s variables if there is a leading vehicle close enough
-    double leading_vehicle_s = leading_vehicle_s_and_sdot[0]
+    double leading_vehicle_s = leading_vehicle_s_and_sdot[0];
     if (leading_vehicle_s < target_s && leading_vehicle_s > this->s) {
         target_s = leading_vehicle_s_and_sdot[0] - FOLLOW_DISTANCE;
         target_s_d = leading_vehicle_s_and_sdot[1];
         // target acceleration = difference between start/end velocities over time duration? or just zero?
         //target_s_dd = (target_s_d - this->s_d) / (N_SAMPLES * DT);
     }
-    */
+    
 
     return {{target_s, target_s_d, target_s_dd}, {target_d, target_d_d, target_d_dd}};
 }
@@ -219,7 +221,7 @@ vector<double> Vehicle::get_leading_vehicle_data_for_lane(int target_lane, map<i
             double predicted_end_s = pred_traj[pred_traj.size()-1][0];
             double next_to_last_s = pred_traj[pred_traj.size()-2][0];
             double predicted_s_dot = (predicted_end_s - next_to_last_s) / DT;
-            if (predicted_end_s < leading_vehicle_distance) {
+            if (predicted_end_s < leading_vehicle_distance && predicted_end_s > this->s) {
                 leading_vehicle_distance = predicted_end_s;
                 leading_vehicle_speed = predicted_s_dot;
             }
