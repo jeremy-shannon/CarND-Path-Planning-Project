@@ -5,7 +5,7 @@
 #define FOLLOW_DISTANCE 6.0             // distance to keep behind leading cars
 #define PERCENT_V_DIFF_TO_MAKE_UP 0.5   // the percent difference between current velocity and target velocity to allow ego car to make up in a single trajectory      
 
-#define PREVIOUS_PATH_POINTS_TO_KEEP 50
+#define PREVIOUS_PATH_POINTS_TO_KEEP 25
 #define NUM_PATH_POINTS 50
 #define PATH_DT 0.02                    // seconds
 
@@ -16,7 +16,7 @@
 #define NUM_WAYPOINTS_AHEAD 5
 
 // for trajectory generation/evaluation and non-ego car predictions
-#define N_SAMPLES 15
+#define N_SAMPLES 10
 #define DT 0.2                          // seconds
 
 #define NUM_RANDOM_TRAJ_TO_GEN 4        // the number of perturbed trajectories to generate (for each perturbed duration)
@@ -37,7 +37,7 @@
 #define EXPECTED_JERK_IN_ONE_SEC 2      // m/s/s
 #define EXPECTED_ACC_IN_ONE_SEC 1       // m/s
 
-#define SPEED_LIMIT 18.0                // m/s
+#define SPEED_LIMIT 22.0                // m/s
 
 // cost function weights
 #define TIME_DIFF_COST_WEIGHT 10

@@ -122,11 +122,13 @@ vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vecto
         cout << "; ";
     }
     cout << ")" << endl;
-    cout << "best frenet trajectory (spaced out; s,d):" << endl;
-    for (int i = 0; i < N_SAMPLES; i += N_SAMPLES/3-1) {
-        cout << i << ":(" << best_frenet_traj[0][i] << "," << best_frenet_traj[1][i] << ") ";
-    }
-    cout << endl;
+
+    // // DEBUG
+    // cout << "best frenet trajectory (s,d):" << endl;
+    // for (int i = 0; i < best_frenet_traj[0].size(); i++) {
+    //     cout << best_frenet_traj[0][i] << ", " << best_frenet_traj[1][i] << endl;
+    // }
+    // cout << endl << endl;
 
     return best_frenet_traj;
 }
@@ -289,7 +291,7 @@ vector<vector<double>> Vehicle::generate_traj_for_target(vector<vector<double>> 
 
     // populate s and t trajectories at each time step
     for (int i = 0; i < N_SAMPLES; i++) {
-        double t = i * DT;
+        double t = i * duration/N_SAMPLES;
         double s_val = 0, d_val = 0;
         for (int j = 0; j < s_traj_coeffs.size(); j++) {
             s_val += this->s_traj_coeffs[j] * pow(t, j);
