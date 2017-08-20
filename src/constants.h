@@ -1,12 +1,11 @@
 #ifndef CONSTANTS
 #define CONSTANTS
 
-#define VEHICLE_RADIUS 1.5              // meters
-#define FOLLOW_DISTANCE 6.0             // distance to keep behind leading cars
-#define PERCENT_V_DIFF_TO_MAKE_UP 0.5   // the percent difference between current velocity and target velocity to allow ego car to make up in a single trajectory      
+#define VEHICLE_RADIUS 1.9              // meters
+#define FOLLOW_DISTANCE 10.0             // distance to keep behind leading cars
 
-#define PREVIOUS_PATH_POINTS_TO_KEEP 15
-#define NUM_PATH_POINTS 50
+#define PREVIOUS_PATH_POINTS_TO_KEEP 5
+#define NUM_PATH_POINTS 100
 #define PATH_DT 0.02                    // seconds
 
 #define TRACK_LENGTH 6945.554           // meters
@@ -16,9 +15,26 @@
 #define NUM_WAYPOINTS_AHEAD 5
 
 // for trajectory generation/evaluation and non-ego car predictions
-#define N_SAMPLES 10
+#define N_SAMPLES 15
 #define DT 0.25                         // seconds
 
+#define SPEED_LIMIT 21.5                // m/s
+//#define SPEED_LIMIT 50.0                // m/s
+
+// cost function weights
+#define COLLISION_COST_WEIGHT 99999
+#define BUFFER_COST_WEIGHT 1
+#define EFFICIENCY_COST_WEIGHT 100
+#define NOT_MIDDLE_LANE_COST_WEIGHT 1
+// #define SPEED_LIMIT_COST_WEIGHT 9999
+// #define MAX_ACCEL_COST_WEIGHT 9999
+// #define AVG_ACCEL_COST_WEIGHT 1000
+// #define MAX_JERK_COST_WEIGHT 9999
+// #define AVG_JERK_COST_WEIGHT 1000
+// #define TIME_DIFF_COST_WEIGHT 10
+// #define TRAJ_DIFF_COST_WEIGHT 10
+
+// DEPRECATED CONSTANTS
 #define NUM_RANDOM_TRAJ_TO_GEN 4        // the number of perturbed trajectories to generate (for each perturbed duration)
 #define NUM_TIMESTEPS_TO_PERTURB 2      // the number of timesteps, +/- target time, to perturb trajectories
 
@@ -37,19 +53,6 @@
 #define EXPECTED_JERK_IN_ONE_SEC 2      // m/s/s
 #define EXPECTED_ACC_IN_ONE_SEC 1       // m/s
 
-#define SPEED_LIMIT 21.5                // m/s
-
-// cost function weights
-#define TIME_DIFF_COST_WEIGHT 10
-#define TRAJ_DIFF_COST_WEIGHT 10
-#define COLLISION_COST_WEIGHT 9999
-#define BUFFER_COST_WEIGHT 10
-#define SPEED_LIMIT_COST_WEIGHT 9999
-#define EFFICIENCY_COST_WEIGHT 100
-#define MAX_ACCEL_COST_WEIGHT 9999
-#define AVG_ACCEL_COST_WEIGHT 1000
-#define MAX_JERK_COST_WEIGHT 9999
-#define AVG_JERK_COST_WEIGHT 1000
-#define NOT_MIDDLE_LANE_COST_WEIGHT 1000
+#define PERCENT_V_DIFF_TO_MAKE_UP 0.5   // the percent difference between current velocity and target velocity to allow ego car to make up in a single trajectory  
 
 #endif

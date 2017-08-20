@@ -205,6 +205,10 @@ vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vect
         // target acceleration = difference between start/end velocities over time duration? or just zero?
         //target_s_dd = (target_s_d - this->s_d) / (N_SAMPLES * DT);
 
+        if (leading_vehicle_s < target_s) {
+            target_s_d -= 1; // slow down if too close
+        }
+
         // DEBUG
         cout << "NEARBY LEAD VEHICLE DETECTED!" << endl;
         cout << "s: " << leading_vehicle_s_and_sdot[0]

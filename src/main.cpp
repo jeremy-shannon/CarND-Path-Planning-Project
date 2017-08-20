@@ -219,6 +219,8 @@ int main() {
 					// DEBUG
 					cout << endl << "**************** ITERATION BEGIN ****************" << endl << endl;
 
+					ofstream single_iteration_log;
+					single_iteration_log.open("path_planning_log-single_iteration.csv");
 					
 					// ********************* CONSTRUCT INTERPOLATED WAYPOINTS OF NEARBY AREA **********************
 					int num_waypoints = map_waypoints_x.size();
@@ -461,22 +463,22 @@ int main() {
 						predictions[v_id] = preds;
 					}
 
-					// DEBUG
-					cout << "****SENSOR FUSION DATA****" << endl;
-					cout << "sensor fusion: (id, x, y, vx, vy, s, d), (distance from ego)" << endl;
-					for (auto sf: sensor_fusion) {
-						cout << "(" << sf[0] << ": " << sf[1] << "," << sf[2] << "," << sf[3] << "," << sf[4] << "," << sf[5] << "," << sf[6] << ") (" << distance(pos_x, pos_y, sf[1], sf[2]) << ")" << endl;
-					}
-					cout << endl << "predictions: (id, (i s1,d1) (i s2,d2) ... (i sn,dn) - spaced out)" << endl;
-					for (auto pred : predictions) {
-						cout << pred.first << " ";
-						auto sd = pred.second;
-    				for (int i = 0; i < N_SAMPLES; i += N_SAMPLES/3-1) {
-							cout << "(" << i << " " << sd[i][0] << "," << sd[i][1] << ") ";
-						}
-						cout << endl;
-					}
-					cout << endl;
+					// // DEBUG
+					// cout << "****SENSOR FUSION DATA****" << endl;
+					// cout << "sensor fusion: (id, x, y, vx, vy, s, d), (distance from ego)" << endl;
+					// for (auto sf: sensor_fusion) {
+					// 	cout << "(" << sf[0] << ": " << sf[1] << "," << sf[2] << "," << sf[3] << "," << sf[4] << "," << sf[5] << "," << sf[6] << ") (" << distance(pos_x, pos_y, sf[1], sf[2]) << ")" << endl;
+					// }
+					// cout << endl << "predictions: (id, (i s1,d1) (i s2,d2) ... (i sn,dn) - spaced out)" << endl;
+					// for (auto pred : predictions) {
+					// 	cout << pred.first << " ";
+					// 	auto sd = pred.second;
+    			// 	for (int i = 0; i < N_SAMPLES; i += N_SAMPLES/3-1) {
+					// 		cout << "(" << i << " " << sd[i][0] << "," << sd[i][1] << ") ";
+					// 	}
+					// 	cout << endl;
+					// }
+					// cout << endl;
 
 					// ******************************* DETERMINE BEST TRAJECTORY ***********************************
 					// where the magic happens? NOPE! I WISH - THIS APPORACH HAS BEEN ABANDONED
@@ -505,23 +507,23 @@ int main() {
 					for (string state: my_car.available_states) {
         		vector<vector<double>> target_s_and_d = my_car.get_target_for_state(state, predictions, duration);
 
-						// // DEBUG
-        		// cout << "target s&d for state " << state << ": ";
-        		// for (int i = 0; i < 2; i++) {
-            // 	for (int j = 0; j < 3; j++) {
-            //     cout << target_s_and_d[i][j];
-            //     if (j != 2) cout << ", ";
-						// 	}
-						// 	cout << "; ";
-						// }
-						// cout << endl;
+						// DEBUG
+        		cout << "target s&d for state " << state << ": ";
+        		for (int i = 0; i < 2; i++) {
+            	for (int j = 0; j < 3; j++) {
+                cout << target_s_and_d[i][j];
+                if (j != 2) cout << ", ";
+							}
+							cout << "; ";
+						}
+						cout << endl;
 
 						vector<vector<double>> possible_traj = my_car.generate_traj_for_target(target_s_and_d, duration);
 
 						double current_cost = calculate_total_cost(possible_traj[0], possible_traj[1], predictions);
 
-						// // DEBUG
-						// cout << "cost: " << current_cost << endl;
+						// DEBUG
+						cout << "total cost: " << current_cost << endl;
 
 						if (current_cost < best_cost) {
 								best_cost = current_cost;
@@ -531,11 +533,11 @@ int main() {
 						}
 					}
 
-					// DEBUG - ONLY KEEP LANE - REMOVE THIS LATER :D
-					best_traj_state = "KL";
-					best_target = my_car.get_target_for_state(best_traj_state, predictions, duration);
-					// but keep this, maybe
-					best_frenet_traj = my_car.generate_traj_for_target(best_target, duration);
+					// // DEBUG - ONLY KEEP LANE - REMOVE THIS LATER :D
+					// best_traj_state = "KL";
+					// best_target = my_car.get_target_for_state(best_traj_state, predictions, duration);
+					// // but keep this, maybe
+					// best_frenet_traj = my_car.generate_traj_for_target(best_target, duration);
 
 					// DEBUG
 					cout << "chosen state: " << best_traj_state << ", cost: " << best_cost << endl;
@@ -548,14 +550,14 @@ int main() {
 							cout << "; ";
 					}
 					cout << ")" << endl;
-					log_file << "ego s,ego d,s1,d1,s2,d2,s3,d3,s4,d4,s5,d5,s6,d6,s7,d7,s8,d8,s9,d9,s10,d10,s11,d11" << endl;
+					single_iteration_log << "ego s,ego d,s1,d1,s2,d2,s3,d3,s4,d4,s5,d5,s6,d6,s7,d7,s8,d8,s9,d9,s10,d10,s11,d11,s12,d12" << endl;
 					for (int i = 0; i < best_frenet_traj[0].size(); i++) {
-						log_file << best_frenet_traj[0][i] << "," << best_frenet_traj[1][i] << ",";
+						single_iteration_log << best_frenet_traj[0][i] << "," << best_frenet_traj[1][i] << ",";
 						for (auto prediction : predictions) {
 							vector<vector<double>> pred_traj = prediction.second;
-							log_file << pred_traj[i][0] << "," << pred_traj[i][1] << ",";
+							single_iteration_log << pred_traj[i][0] << "," << pred_traj[i][1] << ",";
 						}
-						log_file << endl;
+						single_iteration_log << endl;
 					}
 
 					// ********************* PRODUCE NEW PATH ***********************
@@ -762,6 +764,7 @@ int main() {
 					//this_thread::sleep_for(chrono::milliseconds(1000));
 					ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 					
+					single_iteration_log.close();
         }
       } else {
         // Manual driving
