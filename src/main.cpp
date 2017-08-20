@@ -553,7 +553,7 @@ int main() {
 						log_file << best_frenet_traj[0][i] << "," << best_frenet_traj[1][i] << ",";
 						for (auto prediction : predictions) {
 							vector<vector<double>> pred_traj = prediction.second;
-							log_file << pred_traj[i][0] << "," << pred_traj[i][1];
+							log_file << pred_traj[i][0] << "," << pred_traj[i][1] << ",";
 						}
 						log_file << endl;
 					}
