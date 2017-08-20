@@ -37,7 +37,7 @@ public:
 
   vector<vector<double>> get_target_for_state(string state, map<int, vector<vector<double>>> predictions, double duration);
 
-  vector<double> get_leading_vehicle_data_for_lane(int target_lane, map<int, vector<vector<double>>> predictions);
+  vector<double> get_leading_vehicle_data_for_lane(int target_lane, map<int, vector<vector<double>>> predictions, double duration);
 
   vector<vector<double>> perturb(vector<vector<double>> target_s_and_d);
 

@@ -196,9 +196,9 @@ vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vect
     }
     
     // replace target_s variables if there is a leading vehicle close enough
-    leading_vehicle_s_and_sdot = get_leading_vehicle_data_for_lane(target_lane, predictions);
+    leading_vehicle_s_and_sdot = get_leading_vehicle_data_for_lane(target_lane, predictions, duration);
     double leading_vehicle_s = leading_vehicle_s_and_sdot[0];
-    if (leading_vehicle_s < target_s && leading_vehicle_s > this->s) {
+    if (leading_vehicle_s < target_s + FOLLOW_DISTANCE && leading_vehicle_s > this->s) {
 
         target_s = leading_vehicle_s_and_sdot[0] - FOLLOW_DISTANCE;
         target_s_d = leading_vehicle_s_and_sdot[1];
@@ -215,7 +215,7 @@ vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vect
     return {{target_s, target_s_d, target_s_dd}, {target_d, target_d_d, target_d_dd}};
 }
 
-vector<double> Vehicle::get_leading_vehicle_data_for_lane(int target_lane, map<int, vector<vector<double>>> predictions) {
+vector<double> Vehicle::get_leading_vehicle_data_for_lane(int target_lane, map<int, vector<vector<double>>> predictions, double duration) {
     // returns s and s_dot for the nearest (ahead) vehicle in target lane
     // this assumes the dummy vehicle will keep its lane and velocity, it will return the end position
     // and velocity (based on difference between last two positions)
@@ -224,10 +224,12 @@ vector<double> Vehicle::get_leading_vehicle_data_for_lane(int target_lane, map<i
         vector<vector<double>> pred_traj = prediction.second;
         int pred_lane = pred_traj[0][1] / 4;
         if (pred_lane == target_lane) {
+            double start_s = pred_traj[0][0];
             double predicted_end_s = pred_traj[pred_traj.size()-1][0];
             double next_to_last_s = pred_traj[pred_traj.size()-2][0];
-            double predicted_s_dot = (predicted_end_s - next_to_last_s) / DT;
-            if (predicted_end_s < nearest_leading_vehicle_distance && predicted_end_s > this->s) {
+            double dt = duration / N_SAMPLES;
+            double predicted_s_dot = (predicted_end_s - next_to_last_s) / dt;
+            if (predicted_end_s < nearest_leading_vehicle_distance && start_s > this->s) {
                 nearest_leading_vehicle_distance = predicted_end_s;
                 nearest_leading_vehicle_speed = predicted_s_dot;
             }
