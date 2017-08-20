@@ -1,6 +1,5 @@
 #include "vehicle.h"
 #include "constants.h"
-#include "costs.h"
 #include "jmt.h"
 
 #include <iostream>
@@ -32,6 +31,8 @@ Vehicle::~Vehicle() {}
 
 vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vector<double>>> predictions, double duration) {
     
+    // NOTE: THIS METHOD IS FROM AN ALTERNATE IMPLEMENTATION AND NO LONGER USED
+
     update_available_states();
 
     // DEBUG
@@ -166,8 +167,8 @@ vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vect
     // lateral acceleration : 0
     double target_d_dd = 0;
     // longitudinal velocity : current velocity + max allowed accel * duration
-    double target_s_d = min(this->s_d + MAX_INSTANTANEOUS_ACCEL/2 * duration, SPEED_LIMIT);
-    //target_s_d = SPEED_LIMIT;    
+    double target_s_d = min(this->s_d + MAX_INSTANTANEOUS_ACCEL/4 * duration, SPEED_LIMIT);
+    target_s_d = SPEED_LIMIT;    
     // longitudinal acceleration : zero ?
     double target_s_dd = 0;
     // longitudinal acceleration : difference between current/target velocity over trajectory duration?
@@ -207,7 +208,6 @@ vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vect
         // target acceleration = difference between start/end velocities over time duration? or just zero?
         //target_s_dd = (target_s_d - this->s_d) / (N_SAMPLES * DT);
     }
-    
 
     return {{target_s, target_s_d, target_s_dd}, {target_d, target_d_d, target_d_dd}};
 }
@@ -320,14 +320,17 @@ double Vehicle::evaluate_coeffs_at_time(vector<double> coeffs, double time) {
     return eval;
 }
 
-vector<vector<double>> Vehicle::generate_predictions() {
+vector<vector<double>> Vehicle::generate_predictions(double traj_start_time, double duration) {
 
     // Generates a list of predicted s and d positions for dummy constant-speed vehicles
+    // Because ego car trajectory is considered from end of previous path, we should also consider the 
+    // trajectories of other cars starting at that time.
 
     vector<vector<double>> predictions;
     for( int i = 0; i < N_SAMPLES; i++)
     {
-        double new_s = this->s + this->s_d * i * DT;
+        double t = traj_start_time + (i * duration/N_SAMPLES);
+        double new_s = this->s + this->s_d * t;
         vector<double> s_and_d = {new_s, this->d};
         predictions.push_back(s_and_d);
     }

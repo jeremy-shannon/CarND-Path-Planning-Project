@@ -17,7 +17,7 @@
 
 // for trajectory generation/evaluation and non-ego car predictions
 #define N_SAMPLES 10
-#define DT 0.2                          // seconds
+#define DT 0.5                         // seconds
 
 #define NUM_RANDOM_TRAJ_TO_GEN 4        // the number of perturbed trajectories to generate (for each perturbed duration)
 #define NUM_TIMESTEPS_TO_PERTURB 2      // the number of timesteps, +/- target time, to perturb trajectories
@@ -37,7 +37,7 @@
 #define EXPECTED_JERK_IN_ONE_SEC 2      // m/s/s
 #define EXPECTED_ACC_IN_ONE_SEC 1       // m/s
 
-#define SPEED_LIMIT 22.0                // m/s
+#define SPEED_LIMIT 21.0                // m/s
 
 // cost function weights
 #define TIME_DIFF_COST_WEIGHT 10

@@ -47,7 +47,7 @@ public:
 
   double evaluate_coeffs_at_time(vector<double> coeffs, double time);
 
-  vector<vector<double>> generate_predictions();
+  vector<vector<double>> generate_predictions(double traj_start_time, double duration);
 
   string display();
 

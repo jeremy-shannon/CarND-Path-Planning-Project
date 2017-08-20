@@ -167,13 +167,11 @@ double avg_jerk_cost(vector<double> s_traj) {
 
 double not_middle_lane_cost(vector<double> d_traj) {
   // penalize not shooting for middle lane (d = 6)
-  for (auto d: d_traj) cout << d << ", ";
   double end_d = d_traj[d_traj.size()-1];
-  cout << end_d << endl;
   return logistic(pow(end_d-6, 2));
 }
 
-double calculate_total_cost(vector<double> s_traj, vector<double> d_traj, map<int,vector<vector<double>>> predictions, vector<double> target_s, vector<double> target_d, double target_time, double actual_time) {
+double calculate_total_cost(vector<double> s_traj, vector<double> d_traj, map<int,vector<vector<double>>> predictions) {
 
   double total_cost = 0;
 
@@ -194,11 +192,11 @@ double calculate_total_cost(vector<double> s_traj, vector<double> d_traj, map<in
   double ajd = avg_jerk_cost(d_traj) * AVG_JERK_COST_WEIGHT;
   double nml = not_middle_lane_cost(d_traj) * NOT_MIDDLE_LANE_COST_WEIGHT;
 
-  cout << "costs: " << col << ", " << buf << ", " << esl << ", " << eff << ", " << mas << ", " << aas << ", " << mad << ", " << aad << ", " << mjs << ", " << ajs << ", " << mjd << ", " << ajd << ", " << nml << endl;
-
   total_cost += col + buf + esl + eff + mas + aas + mad + aad + mjs + ajs + mjd + ajd + nml;
 
-  cout << "total cost: " << total_cost << endl;
+  // DEBUG
+  cout << "costs: " << col << ", " << buf << ", " << esl << ", " << eff << ", " << mas << ", " << aas << ", " << mad << ", " << aad << ", " << mjs << ", " << ajs << ", " << mjd << ", " << ajd << ", " << nml << endl;
+  // cout << "total cost: " << total_cost << endl;
 
   return total_cost;
 }
