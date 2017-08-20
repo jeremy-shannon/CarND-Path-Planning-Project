@@ -205,12 +205,14 @@ vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vect
         // target acceleration = difference between start/end velocities over time duration? or just zero?
         //target_s_dd = (target_s_d - this->s_d) / (N_SAMPLES * DT);
 
-        if (leading_vehicle_s < target_s) {
+        if (fabs(leading_vehicle_s - target_s) < FOLLOW_DISTANCE) {
+            cout << "SLOWING DOWN!! current target speed: " << target_s_d;
             target_s_d -= 1; // slow down if too close
+            cout << "  new target speed: " << target_s_d << endl;
         }
 
         // DEBUG
-        cout << "NEARBY LEAD VEHICLE DETECTED!" << endl;
+        cout << "NEARBY LEAD VEHICLE DETECTED!  ";
         cout << "s: " << leading_vehicle_s_and_sdot[0]
              << ", lane: " << target_lane 
              << ", speed: " << leading_vehicle_s_and_sdot[1] << endl;

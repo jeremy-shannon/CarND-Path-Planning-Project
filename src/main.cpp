@@ -442,13 +442,13 @@ int main() {
 					my_car.d_d  = d_dot;           // d dot - velocity in d
 					my_car.d_dd = d_ddot;          // d dot-dot - acceleration in d
 
-					// DEBUG
-					cout << "****EGO CAR DATA****" << endl;
-					cout << "ego state (x,y,s,d,yaw,speed): " << car_x << ", " << car_y << ", " << car_s << ", " << car_d << ", " << car_yaw << ", " << car_speed << endl;
-					cout << "end_path_s/d: " << end_path_s << ", " << end_path_d << endl;
-					cout << "planning state (x,y,yaw): " << pos_x << ", " << pos_y << ", " << angle << endl;
-					cout << "planning state (s,s_d,s_dd),(d,d_d,d_dd): (" << pos_s << ", " << s_dot << ", " << s_ddot;
-					cout << ") (" << pos_d << ", " << d_dot << ", " << d_ddot << ")" << endl << endl;
+					// // DEBUG
+					// cout << "****EGO CAR DATA****" << endl;
+					// cout << "ego state (x,y,s,d,yaw,speed): " << car_x << ", " << car_y << ", " << car_s << ", " << car_d << ", " << car_yaw << ", " << car_speed << endl;
+					// cout << "end_path_s/d: " << end_path_s << ", " << end_path_d << endl;
+					// cout << "planning state (x,y,yaw): " << pos_x << ", " << pos_y << ", " << angle << endl;
+					// cout << "planning state (s,s_d,s_dd),(d,d_d,d_dd): (" << pos_s << ", " << s_dot << ", " << s_ddot;
+					// cout << ") (" << pos_d << ", " << d_dot << ", " << d_ddot << ")" << endl << endl;
 
 					// ********************* GENERATE PREDICTIONS FROM SENSOR FUSION DATA **************************
 					// The data format for each car is: [ id, x, y, vx, vy, s, d]. The id is a unique identifier for that car. The x, y values are in global map coordinates, and the vx, vy values are the velocity components, also in reference to the global map. Finally s and d are the Frenet coordinates for that car.
@@ -496,10 +496,10 @@ int main() {
 
 					my_car.update_available_states();
 
-					// DEBUG
-					cout << "available states: "; 
-					for (auto st: my_car.available_states) cout << st << " ";
-					cout << endl; 
+					// // DEBUG
+					// cout << "available states: "; 
+					// for (auto st: my_car.available_states) cout << st << " ";
+					// cout << endl; 
 
 					vector<vector<double>> best_frenet_traj, best_target;
 					double best_cost = 999999;
@@ -507,23 +507,23 @@ int main() {
 					for (string state: my_car.available_states) {
         		vector<vector<double>> target_s_and_d = my_car.get_target_for_state(state, predictions, duration);
 
-						// DEBUG
-        		cout << "target s&d for state " << state << ": ";
-        		for (int i = 0; i < 2; i++) {
-            	for (int j = 0; j < 3; j++) {
-                cout << target_s_and_d[i][j];
-                if (j != 2) cout << ", ";
-							}
-							cout << "; ";
-						}
-						cout << endl;
+						// // DEBUG
+        		// cout << "target s&d for state " << state << ": ";
+        		// for (int i = 0; i < 2; i++) {
+            // 	for (int j = 0; j < 3; j++) {
+            //     cout << target_s_and_d[i][j];
+            //     if (j != 2) cout << ", ";
+						// 	}
+						// 	cout << "; ";
+						// }
+						// cout << endl;
 
 						vector<vector<double>> possible_traj = my_car.generate_traj_for_target(target_s_and_d, duration);
 
 						double current_cost = calculate_total_cost(possible_traj[0], possible_traj[1], predictions);
 
-						// DEBUG
-						cout << "total cost: " << current_cost << endl;
+						// // DEBUG
+						// cout << "total cost: " << current_cost << endl;
 
 						if (current_cost < best_cost) {
 								best_cost = current_cost;
@@ -539,19 +539,22 @@ int main() {
 					// // but keep this, maybe
 					// best_frenet_traj = my_car.generate_traj_for_target(best_target, duration);
 
-					// DEBUG
-					cout << "chosen state: " << best_traj_state << ", cost: " << best_cost << endl;
-					cout << "target (s,sd,sdd - d,dd,ddd): (";
-					for (int i = 0; i < 2; i++) {
-							for (int j = 0; j < 3; j++) {
-									cout << best_target[i][j];
-									if (j != 2) cout << ", ";
-							}
-							cout << "; ";
-					}
-					cout << ")" << endl;
-					single_iteration_log << "ego s,ego d,s1,d1,s2,d2,s3,d3,s4,d4,s5,d5,s6,d6,s7,d7,s8,d8,s9,d9,s10,d10,s11,d11,s12,d12" << endl;
+					// // DEBUG
+					// cout << "chosen state: " << best_traj_state << ", cost: " << best_cost << endl;
+					// cout << "target (s,sd,sdd - d,dd,ddd): (";
+					// for (int i = 0; i < 2; i++) {
+					// 		for (int j = 0; j < 3; j++) {
+					// 				cout << best_target[i][j];
+					// 				if (j != 2) cout << ", ";
+					// 		}
+					// 		cout << "; ";
+					// }
+					// cout << ")" << endl;
+
+					// LOG
+					single_iteration_log << "i,ego s,ego d,s1,d1,s2,d2,s3,d3,s4,d4,s5,d5,s6,d6,s7,d7,s8,d8,s9,d9,s10,d10,s11,d11,s12,d12" << endl;
 					for (int i = 0; i < best_frenet_traj[0].size(); i++) {
+						single_iteration_log << i << ",";
 						single_iteration_log << best_frenet_traj[0][i] << "," << best_frenet_traj[1][i] << ",";
 						for (auto prediction : predictions) {
 							vector<vector<double>> pred_traj = prediction.second;
@@ -593,7 +596,7 @@ int main() {
 					// last two points of coarse trajectory, use target_d and current s + 30,60
 					double target_s1 = pos_s + 30;
 					double target_d1 = best_target[1][0];
-					vector<double> target_xy1 = getXY(target_s1, target_d1, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+					vector<double> target_xy1 = getXY(target_s1, target_d1, interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y);
 					double target_x1 = target_xy1[0];
 					double target_y1 = target_xy1[1];
 					coarse_s_traj.push_back(target_s1);
@@ -601,7 +604,7 @@ int main() {
 					coarse_y_traj.push_back(target_y1);
 					double target_s2 = target_s1 + 30;
 					double target_d2 = target_d1;
-					vector<double> target_xy2 = getXY(target_s2, target_d2, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+					vector<double> target_xy2 = getXY(target_s2, target_d2, interpolated_waypoints_s, interpolated_waypoints_x, interpolated_waypoints_y);
 					double target_x2 = target_xy2[0];
 					double target_y2 = target_xy2[1];
 					coarse_s_traj.push_back(target_s2);
@@ -634,8 +637,8 @@ int main() {
 							// current_a += a_incr;
 							// v_incr = (target_s_dot - current_v)/(fabs(target_s_dot - current_v)) * current_a * PATH_DT;
 
-							// arrived at 0.15 value empirically
-							v_incr = (target_s_dot - current_v)/(fabs(target_s_dot - current_v)) * 0.15;
+							// arrived at VELOCITY_INCREMENT_LIMIT value empirically
+							v_incr = (target_s_dot - current_v)/(fabs(target_s_dot - current_v)) * VELOCITY_INCREMENT_LIMIT;
 						}
 						current_v += v_incr;
 						current_s += current_v * PATH_DT;
@@ -790,6 +793,15 @@ int main() {
 
   h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
     std::cout << "Connected!!!" << std::endl;
+
+		// DEBUG
+		for (int i = 0; i < 5; i++) {
+			for (int j = 0; j < 80; j++) {
+				cout << "#";
+			}
+			cout << endl;
+		}
+		cout << endl;
   });
 
   h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,

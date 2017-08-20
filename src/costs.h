@@ -41,6 +41,25 @@ double nearest_approach_to_any_vehicle(vector<double> s_traj, vector<double> d_t
   return closest;
 }
 
+double nearest_approach_to_any_vehicle_in_lane(vector<double> s_traj, vector<double> d_traj, map<int,vector<vector<double>>> predictions) {
+  // Determines the nearest the vehicle comes to any other vehicle throughout a trajectory
+  double closest = 999999;
+  for (auto prediction : predictions) {
+    double my_final_d = d_traj[d_traj.size() - 1];
+    int my_lane = my_final_d / 4;
+    vector<vector<double>> pred_traj = prediction.second;
+    double pred_final_d = pred_traj[pred_traj.size() - 1][1];
+    int pred_lane = pred_final_d / 4;
+    if (my_lane == pred_lane) {
+      double current_dist = nearest_approach(s_traj, d_traj, prediction.second);
+      if (current_dist < closest && current_dist < 120) {
+        closest = current_dist;
+      }
+    }
+  }
+  return closest;
+}
+
 vector<double> velocities_for_trajectory(vector<double> traj) {
   // given a trajectory (a vector of positions), return the average velocity between each pair as a vector
   // also can be used to find accelerations from velocities, jerks from accelerations, etc.
@@ -90,6 +109,12 @@ double collision_cost(vector<double> s_traj, vector<double> d_traj, map<int,vect
 double buffer_cost(vector<double> s_traj, vector<double> d_traj, map<int,vector<vector<double>>> predictions) {
   // Penalizes getting close to other vehicles.
   double nearest = nearest_approach_to_any_vehicle(s_traj, d_traj, predictions);
+  return logistic(2 * VEHICLE_RADIUS / nearest);
+}
+
+double in_lane_buffer_cost(vector<double> s_traj, vector<double> d_traj, map<int,vector<vector<double>>> predictions) {
+  // Penalizes getting close to other vehicles.
+  double nearest = nearest_approach_to_any_vehicle_in_lane(s_traj, d_traj, predictions);
   return logistic(2 * VEHICLE_RADIUS / nearest);
 }
 
@@ -183,6 +208,7 @@ double calculate_total_cost(vector<double> s_traj, vector<double> d_traj, map<in
   double total_cost = 0;
   double col = collision_cost(s_traj, d_traj, predictions) * COLLISION_COST_WEIGHT;
   double buf = buffer_cost(s_traj, d_traj, predictions) * BUFFER_COST_WEIGHT;
+  double ilb = in_lane_buffer_cost(s_traj, d_traj, predictions) * IN_LANE_BUFFER_COST_WEIGHT;
   double eff = efficiency_cost(s_traj) * EFFICIENCY_COST_WEIGHT;
   double nml = not_middle_lane_cost(d_traj) * NOT_MIDDLE_LANE_COST_WEIGHT;
   //double esl = exceeds_speed_limit_cost(s_traj) * SPEED_LIMIT_COST_WEIGHT;
@@ -198,16 +224,16 @@ double calculate_total_cost(vector<double> s_traj, vector<double> d_traj, map<in
   //double strajd = traj_diff_cost(s_traj, target_s) * TRAJ_DIFF_COST_WEIGHT;
   //double dtrajd = traj_diff_cost(d_traj, target_d) * TRAJ_DIFF_COST_WEIGHT;
 
-  total_cost += col + buf + eff + nml;// + esl + mas + aas + mad + aad + mjs + ajs + mjd + ajd;
+  total_cost += col + buf + ilb + eff + nml;// + esl + mas + aas + mad + aad + mjs + ajs + mjd + ajd;
 
-  // DEBUG
-  cout << "costs - col: " << col << ", buf: " << buf << ", eff: " << eff << ", nml: " << nml; 
-  //cout << ", " << esl 
-  //cout << ", " << mas << ", " << aas << ", " << mad << ", " << aad;
-  //cout << ", " << mjs << ", " << ajs << ", " << mjd << ", " << ajd;
-  cout << "  ** ";
-  //cout << endl;
-  //cout << "total cost: " << total_cost << endl;
+  // // DEBUG
+  // cout << "costs - col: " << col << ", buf: " << buf << ", ilb: " << ilb << ", eff: " << eff << ", nml: " << nml; 
+  // //cout << ", " << esl 
+  // //cout << ", " << mas << ", " << aas << ", " << mad << ", " << aad;
+  // //cout << ", " << mjs << ", " << ajs << ", " << mjd << ", " << ajd;
+  // cout << "  ** ";
+  // //cout << endl;
+  // //cout << "total cost: " << total_cost << endl;
 
   return total_cost;
 }
