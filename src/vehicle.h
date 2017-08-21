@@ -31,6 +31,7 @@ public:
   */
   virtual ~Vehicle();
 
+  // DEPRECATED
   vector<vector<double>> get_best_frenet_trajectory(map<int, vector<vector<double>>> predictions, double duration);
 
   void update_available_states(bool car_to_left, bool car_to_right);
@@ -39,6 +40,7 @@ public:
 
   vector<double> get_leading_vehicle_data_for_lane(int target_lane, map<int, vector<vector<double>>> predictions, double duration);
 
+  // DEPRECATED
   vector<vector<double>> perturb(vector<vector<double>> target_s_and_d);
 
   vector<vector<double>> generate_traj_for_target(vector<vector<double>> perturbed_target, double duration);
