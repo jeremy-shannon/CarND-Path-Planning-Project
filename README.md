@@ -5,7 +5,7 @@
 
 The goal of this project is to navigate a car around a simulated highway scenario, including traffic and given waypoint, telemetry, and sensor fusion data. The car must not violate a set of motion constraints, namely maximum velocity, maximum acceleration, and maximum jerk, while also avoiding collisions with other vehicles, keeping to within a highway lane (aside from short periods of time while changing lanes), and changing lanes when doing so is necessary to maintain a speed near the posted speed limit.
 
-This implmentation is summarized in the following five steps:
+This implementation is summarized in the following five steps:
 1. Construct interpolated waypoints of nearby area
 2. Determine ego car parameters and construct vehicle object
 3. Generate predictions from sensor fusion data
@@ -26,7 +26,7 @@ The vehicle state and its associated (self-explanatory) methods are contained in
 
 ### 3. Generate Predictions from Sensor Fusion Data
 
-The sensor fusion data received from the simulator in each iteration is parsed and trajectories for each of the other cars on the road are generated. These trajectories match the duration and interval of the ego car's trajectories generated for each available state and are used in conjunction with a set of cost functions to determine a best trajectory for the ego car. A sample of these predicted trajecories (along with the ego car's predicted trajectory) is shown below.
+The sensor fusion data received from the simulator in each iteration is parsed and trajectories for each of the other cars on the road are generated. These trajectories match the duration and interval of the ego car's trajectories generated for each available state and are used in conjunction with a set of cost functions to determine a best trajectory for the ego car. A sample of these predicted trajectories (along with the ego car's predicted trajectory) is shown below.
 
 ![trajectories](./trajectories.png)
 
@@ -35,8 +35,8 @@ The sensor fusion data received from the simulator in each iteration is parsed a
 Using the ego car "planning state", sensor fusion predictions, and Vehicle class methods mentioned above, an optimal trajectory is produced. 
 
 1. Available states are updated based on the ego car's current position, with some extra assistance from immediate sensor fusion data (I think of this similar to ADAS, helping to, for example, prevent "lane change left" as an available state if there is a car immediately to the left). 
-2. Each available state is given a target Frenet state (position, velocity, and accleration in both s and d dimensions) based on the current state and the traffic predictions. 
-3. A quintic polynomial, jerk-minimizing (JMT) trajectory is produced for each available state and target (*note: although this trajectory was used for the final path plan in a previous approach, in the current implementation the JMT trjectory is only a rough estimate of the final trajectory based on the target state and using the `spline.h` library).
+2. Each available state is given a target Frenet state (position, velocity, and acceleration in both s and d dimensions) based on the current state and the traffic predictions. 
+3. A quintic polynomial, jerk-minimizing (JMT) trajectory is produced for each available state and target (*note: although this trajectory was used for the final path plan in a previous approach, in the current implementation the JMT trajectory is only a rough estimate of the final trajectory based on the target state and using the `spline.h` library).
 4. Each trajectory is evaluated according to a set of cost functions, and the trajectory with the lowest cost is selected. In the current implementation, these cost functions include:
   - Collision cost: penalizes a trajectory that collides with any predicted traffic trajectories.
   - Buffer cost: penalizes a trajectory that comes within a certain distance of another traffic vehicle trajectory.
@@ -50,7 +50,7 @@ The new path starts with a certain number of points from the previous path, whic
 
 ## Conclusion
 
-The resulting path planner works well, but not perfectly. It has managed to accumlate incident-free runs of over ten miles multiple times, and once navigating the track incident-free for over twenty miles (for which the image below is evidence). Improving the planner from this point is difficult due to the infrequency of infractions and inability to duplicate the circumstances that led up to an infraction. Overall, I am very satisfied with its performance.
+The resulting path planner works well, but not perfectly. It has managed to accumulate incident-free runs of over ten miles multiple times, and once navigating the track incident-free for over twenty miles (for which the image below is evidence). Improving the planner from this point is difficult due to the infrequency of infractions and inability to duplicate the circumstances that led up to an infraction. Overall, I am very satisfied with its performance.
 
 ![22 miles](./screenshot.png)
 
