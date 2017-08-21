@@ -32,13 +32,13 @@ Vehicle::~Vehicle() {}
 vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vector<double>>> predictions, double duration) {
     
     // NOTE: THIS METHOD IS FROM AN ALTERNATE IMPLEMENTATION AND NO LONGER USED
+    bool car_to_left = false, car_to_right = false, car_just_ahead = false;
+    update_available_states(car_to_left, car_to_right);
 
-    update_available_states();
-
-    // DEBUG
-    cout << "available states: "; 
-    for (auto st: available_states) cout << st << " ";
-    cout << endl; 
+    // // DEBUG
+    // cout << "available states: "; 
+    // for (auto st: available_states) cout << st << " ";
+    // cout << endl; 
 
     vector<vector<double>> best_frenet_traj, best_target;
     double best_cost = 999999;
@@ -109,20 +109,20 @@ vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vecto
 */
     // DEBUG - ONLY KEEP LANE AND NO PERTURB
     state = "KL";
-    best_target = get_target_for_state(state, predictions, duration);
+    best_target = get_target_for_state(state, predictions, duration, car_just_ahead);
     best_frenet_traj = generate_traj_for_target(best_target, duration);
 
-    // DEBUG
-    cout << "chosen state: " << best_traj_state << ", cost: " << best_cost << ", ";
-    cout << "target (s,sd,sdd - d,dd,ddd): (";
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 3; j++) {
-            cout << best_target[i][j];
-            if (j != 2) cout << ", ";
-        }
-        cout << "; ";
-    }
-    cout << ")" << endl;
+    // // DEBUG
+    // cout << "chosen state: " << best_traj_state << ", cost: " << best_cost << ", ";
+    // cout << "target (s,sd,sdd - d,dd,ddd): (";
+    // for (int i = 0; i < 2; i++) {
+    //     for (int j = 0; j < 3; j++) {
+    //         cout << best_target[i][j];
+    //         if (j != 2) cout << ", ";
+    //     }
+    //     cout << "; ";
+    // }
+    // cout << ")" << endl;
 
     // // DEBUG
     // cout << "best frenet trajectory (s,d):" << endl;
@@ -134,7 +134,7 @@ vector<vector<double>> Vehicle::get_best_frenet_trajectory(map<int, vector<vecto
     return best_frenet_traj;
 }
 
-void Vehicle::update_available_states() {
+void Vehicle::update_available_states(bool car_to_left, bool car_to_right) {
 	/*  Updates the available "states" based on the current state:
     "KL" - Keep Lane
      - The vehicle will attempt to drive its target speed, unless there is 
@@ -144,15 +144,15 @@ void Vehicle::update_available_states() {
        behavior for the "KL" state in the new lane. */
 
     this->available_states = {"KL"};
-    if (this->d > 4) {
+    if (this->d > 4 && !car_to_left) {
         this->available_states.push_back("LCL");
     }
-    if (this->d < 8) {
+    if (this->d < 8 && !car_to_right) {
         this->available_states.push_back("LCR");
     }
 }
 
-vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vector<vector<double>>> predictions, double duration) {
+vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vector<vector<double>>> predictions, double duration, bool car_just_ahead) {
     // Returns two lists s_target and d_target in a single vector - s_target includes 
     // [s, s_dot, and s_ddot] and d_target includes the same
     // If no leading car found target lane, ego car will make up PERCENT_V_DIFF_TO_MAKE_UP of the difference
@@ -198,24 +198,30 @@ vector<vector<double>> Vehicle::get_target_for_state(string state, map<int, vect
     // replace target_s variables if there is a leading vehicle close enough
     leading_vehicle_s_and_sdot = get_leading_vehicle_data_for_lane(target_lane, predictions, duration);
     double leading_vehicle_s = leading_vehicle_s_and_sdot[0];
-    if (leading_vehicle_s < target_s + FOLLOW_DISTANCE && leading_vehicle_s > this->s) {
+    if (leading_vehicle_s - target_s < FOLLOW_DISTANCE && leading_vehicle_s > this->s) {
 
-        target_s = leading_vehicle_s_and_sdot[0] - FOLLOW_DISTANCE;
         target_s_d = leading_vehicle_s_and_sdot[1];
+
+        if (fabs(leading_vehicle_s - target_s) < 0.5 * FOLLOW_DISTANCE) {
+            //cout << "TOO CLOSE IN LANE " << target_lane << "!! current target speed: " << target_s_d;
+            target_s_d -= 1; // slow down if too close
+            //cout << "  new target speed: " << target_s_d << endl;
+        }
+
+        target_s = leading_vehicle_s - FOLLOW_DISTANCE;
         // target acceleration = difference between start/end velocities over time duration? or just zero?
         //target_s_dd = (target_s_d - this->s_d) / (N_SAMPLES * DT);
 
-        if (fabs(leading_vehicle_s - target_s) < FOLLOW_DISTANCE) {
-            cout << "SLOWING DOWN!! current target speed: " << target_s_d;
-            target_s_d -= 1; // slow down if too close
-            cout << "  new target speed: " << target_s_d << endl;
-        }
+        // // DEBUG
+        // cout << "NEARBY LEAD VEHICLE DETECTED!  ";
+        // cout << "s: " << leading_vehicle_s_and_sdot[0]
+        //      << ", lane: " << target_lane 
+        //      << ", speed: " << leading_vehicle_s_and_sdot[1] << endl;
+    }
 
-        // DEBUG
-        cout << "NEARBY LEAD VEHICLE DETECTED!  ";
-        cout << "s: " << leading_vehicle_s_and_sdot[0]
-             << ", lane: " << target_lane 
-             << ", speed: " << leading_vehicle_s_and_sdot[1] << endl;
+    // emergency brake
+    if (car_just_ahead) {
+        target_s_d = 0.0;
     }
 
     return {{target_s, target_s_d, target_s_dd}, {target_d, target_d_d, target_d_dd}};

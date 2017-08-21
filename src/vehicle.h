@@ -33,9 +33,9 @@ public:
 
   vector<vector<double>> get_best_frenet_trajectory(map<int, vector<vector<double>>> predictions, double duration);
 
-  void update_available_states();
+  void update_available_states(bool car_to_left, bool car_to_right);
 
-  vector<vector<double>> get_target_for_state(string state, map<int, vector<vector<double>>> predictions, double duration);
+  vector<vector<double>> get_target_for_state(string state, map<int, vector<vector<double>>> predictions, double duration, bool car_just_ahead);
 
   vector<double> get_leading_vehicle_data_for_lane(int target_lane, map<int, vector<vector<double>>> predictions, double duration);
 

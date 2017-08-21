@@ -216,8 +216,8 @@ int main() {
 					vector<double> next_x_vals;
 					vector<double> next_y_vals;
 
-					// DEBUG
-					cout << endl << "**************** ITERATION BEGIN ****************" << endl << endl;
+					// // DEBUG
+					// cout << endl << "**************** ITERATION BEGIN ****************" << endl << endl;
 
 					ofstream single_iteration_log;
 					single_iteration_log.open("path_planning_log-single_iteration.csv");
@@ -458,6 +458,7 @@ int main() {
 					for (auto sf: sensor_fusion) {
 						double other_car_vel = sqrt(pow((double)sf[3], 2) + pow((double)sf[4], 2));
 						Vehicle other_car = Vehicle(sf[5], other_car_vel, 0, sf[6], 0, 0);
+						other_cars.push_back(other_car);
 						int v_id = sf[0];
 						vector<vector<double>> preds = other_car.generate_predictions(traj_start_time, duration);
 						predictions[v_id] = preds;
@@ -480,6 +481,31 @@ int main() {
 					// }
 					// cout << endl;
 
+					// Add a little ADAS-like warning system - if any other car is immediately to left or right, set a 
+					// flag to be used for hard limiting available states (i.e. if there is a car to the left, prevent
+					// Lane Change Left as an available state)
+					bool car_to_left = false, car_to_right = false, car_just_ahead = false;
+					for (Vehicle other_car: other_cars) {
+						double s_diff = fabs(other_car.s - car_s);
+						if (s_diff < FOLLOW_DISTANCE) {
+							cout << "s diff: " << s_diff << endl;
+							double d_diff = other_car.d - car_d;
+							if (d_diff > 2 && d_diff < 6) {
+								car_to_right = true;
+							} else if (d_diff < -2 && d_diff > -6) {
+								car_to_left = true;
+							} else if (d_diff > -2 && d_diff < 2) {
+								car_just_ahead = true;
+							}
+						}
+					}
+
+					// DEBUG
+					if (car_to_right) cout << "CAR ON THE RIGHT!!!" << endl;
+					if (car_to_left) cout << "CAR ON THE LEFT!!!" << endl;
+					if (car_just_ahead) cout << "CAR JUST AHEAD!!!" << endl;
+
+
 					// ******************************* DETERMINE BEST TRAJECTORY ***********************************
 					// where the magic happens? NOPE! I WISH - THIS APPORACH HAS BEEN ABANDONED
 					// trajectories come back in a list of s values and a list of d values (not zipped together)
@@ -494,7 +520,7 @@ int main() {
 					// }
 					// cout << endl << endl;
 
-					my_car.update_available_states();
+					my_car.update_available_states(car_to_left, car_to_right);
 
 					// // DEBUG
 					// cout << "available states: "; 
@@ -505,7 +531,7 @@ int main() {
 					double best_cost = 999999;
 					string best_traj_state = "";
 					for (string state: my_car.available_states) {
-        		vector<vector<double>> target_s_and_d = my_car.get_target_for_state(state, predictions, duration);
+        		vector<vector<double>> target_s_and_d = my_car.get_target_for_state(state, predictions, duration, car_just_ahead);
 
 						// // DEBUG
         		// cout << "target s&d for state " << state << ": ";
