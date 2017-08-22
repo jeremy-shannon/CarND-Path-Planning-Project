@@ -18,7 +18,7 @@
 #define N_SAMPLES 20
 #define DT 0.20                         // seconds
 
-#define SPEED_LIMIT 21.75                // m/s
+#define SPEED_LIMIT 21.5                // m/s
 #define VELOCITY_INCREMENT_LIMIT 0.125
 
 // cost function weights

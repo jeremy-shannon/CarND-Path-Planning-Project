@@ -651,7 +651,7 @@ int main() {
 					double current_a = s_ddot;
 					for (int i = 0; i < (NUM_PATH_POINTS - subpath_size); i++) {
 						double v_incr, a_incr;
-						if (current_v == target_s_dot) {
+						if (fabs(target_s_dot - current_v) < 2 * VELOCITY_INCREMENT_LIMIT) {
 							v_incr = 0;
 						} else {
 							// // tried to be clever here
